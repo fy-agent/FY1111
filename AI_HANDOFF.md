@@ -33,12 +33,13 @@ future extension and is not implemented in the current demo.
 
 - Path: `C:\Users\xk\Desktop\VentureD`
 - Branch: `master`
-- Active Trellis task:
-  `.trellis/tasks/08-27-vibekey-hardware-hackathon-demo`
-- Task status at the time of this handoff: `in_progress`
-- The repository currently contains uncommitted task-owned firmware,
-  Companion, protocol, documentation, and Trellis changes. Inspect the current
-  Git status before editing and do not overwrite unrelated work.
+- Archived Trellis task:
+  `.trellis/tasks/archive/2026-08/08-27-vibekey-hardware-hackathon-demo`
+- Task status: `completed`
+- Demo source is committed on `master`. Generated IDF, Cargo, and Companion
+  outputs stay gitignored. Inspect `git status` before editing and do not
+  overwrite unrelated work. The remaining active Trellis task is
+  `00-bootstrap-guidelines`.
 
 ### Read-only VibeKey source repository
 
@@ -142,8 +143,9 @@ unnecessary for the final competition submission.
 
 - MCU family: ESP32-S3.
 - Competition toolchain baseline: ESP-IDF 5.5.4.
-- Exact flash and PSRAM configuration has not yet been proven and must not be
-  copied from VibeKey's N16R8 assumptions.
+- The identified Board C probe reported ESP32-S3 QFN56 rev v0.2 with 8MB
+  embedded PSRAM. Treat that as probe evidence for this board, not a flash
+  layout to copy onto other hardware or from VibeKey's N16R8 assumptions.
 - Do not hard-code a COM port.
 
 Documented Board C resources:
@@ -259,7 +261,7 @@ VentureD/
 ├── protocol/input-event-v1.md           # serial protocol authority
 ├── docs/board-c-demo.md                  # Board C setup and evidence limits
 ├── docs/source-provenance.md             # read-only VibeKey reuse record
-└── .trellis/tasks/08-27-vibekey-hardware-hackathon-demo/
+└── .trellis/tasks/archive/2026-08/08-27-vibekey-hardware-hackathon-demo/
     ├── prd.md
     ├── design.md
     └── implement.md
@@ -281,14 +283,11 @@ The Trellis implementation checklist currently marks these areas as created:
 Treat those checkboxes as task progress, not permanent proof. A new session
 should rerun the relevant checks before making a release or acceptance claim.
 
-Known pending items in the current implementation plan:
+Known remaining items after the archived demo task:
 
-- a fresh ESP-IDF 5.5.4 build in an isolated build/config path;
-- a bounded native Tauri launch/liveness check;
-- actual Board C identification, flash/PSRAM confirmation, and COM selection;
-- physical encoder and independent action-button HIL;
-- any flash, reset, or serial-monitor session;
-- any foreground capture or real `SendInput` test;
+- competition-level HIL sign-off for encoder CW/CCW and GPIO8 restore plus
+  shortcut dispatch;
+- recorded evidence for a real live `SendInput` path on the captured target;
 - any microphone, ASR, `agent_link`, ROROLEE, TiDB Agent, or text-insertion
   integration.
 
