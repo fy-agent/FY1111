@@ -9,7 +9,7 @@ The pin manifest in `main/board_c_pins.h` is the single source of truth.
 | Rotary encoder | ENA/CLK 6, ENB/DT 7; SW unconnected | enabled |
 | External confirm/action button | pull-up SIG 8; 3.3 V and common GND | enabled |
 | Digital microphone | WS 42, SD 2, SCK 41 | reserved, disabled |
-| ST7789 LCD | SCL 21, SDA 47, DC 43, CS 44 | reserved, disabled |
+| ST7789 LCD | SCL 21, SDA 47, DC 43, CS 44 | status screen: Chinese network state |
 | WS2812 | 48 | reserved, disabled |
 | Optional PTT button | 12 | reserved, disabled |
 | Camera and SD-card resources | Board-documented resources | reserved; not allocated by this demo |
@@ -30,6 +30,11 @@ GPIO8 interrupts, queues ISR samples, scans the independent GPIO8 button on a
 10 ms cadence, emits only semantic `VKEY_INPUT/1` records on the ESP32-S3
 USB-Serial-JTAG console, and owns no shortcut mapping.
 The `VKEY_INPUT/1` record is documented in `protocol/input-event-v1.md`.
+Host-to-device Wi-Fi/API configuration and device-to-host network status are
+documented in `protocol/device-link-v1.md`. The Companion stores those secrets
+in `device.json`, not in the shortcut profile. ESP32-S3 station mode is
+2.4 GHz only: a 5 GHz SSID must fail closed with `reason=BAND` instead of
+staying on `CONNECTING`.
 
 The saved Companion profile contract is versioned and nested: `{"version":1,
 "revision":"sha256:...","serial":{"port":"<selected port>","baud":115200},

@@ -1,0 +1,5 @@
+{"file": ".trellis/spec/backend/companion-runtime-contracts.md", "reason": "Tauri command surface, profile vs device settings, serial record kinds"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "Fail-closed errors without leaking secrets"}
+{"file": ".trellis/spec/frontend/component-guidelines.md", "reason": "Keep the compact Chinese Companion shell"}
+{"file": ".trellis/tasks/08-27-wifi-oled-settings/research/siliconflow-and-reuse.md", "reason": "API key/model allowlist and reuse limits"}
+{"file": "protocol/input-event-v1.md", "reason": "Existing uplink must stay unchanged"}

@@ -76,8 +76,11 @@ this first demo.
 
 ## Scope and future seam
 
-The window contains a serial selection, a captured foreground target, and the
-three fixed physical-input rows. It does not edit third-party keybinding files.
+The window contains a serial selection, a collapsed **设置** panel for Wi-Fi
+and the SiliconFlow API key, a captured foreground target, and the three fixed
+physical-input rows. Secrets stay in `device.json`, not the shortcut profile.
+ESP32-S3 station mode is 2.4 GHz only; a 5 GHz SSID is rejected with a visible
+warning instead of staying on 连接中.
 Live dispatch is process-local, defaults to off after every restart, and must
 be explicitly enabled only after a valid profile is loaded.
 
@@ -87,4 +90,5 @@ guarded text insertion`. No ASR provider, credentials, microphone transport,
 or text insertion belongs to this demo.
 
 See [the Board C guide](docs/board-c-demo.md), [the event contract](protocol/input-event-v1.md),
+[the device-link contract](protocol/device-link-v1.md),
 and [source provenance](docs/source-provenance.md).

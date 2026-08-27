@@ -1,4 +1,4 @@
-import type { MappingDraft } from "./types";
+import type { DeviceSettings, MappingDraft } from "./types";
 
 const modifiers = ["CTRL", "ALT", "SHIFT"] as const;
 const allowedPrimary = new Set([
@@ -94,4 +94,20 @@ export function mappingErrors(mappings: readonly MappingDraft[]): Map<string, st
     }
   }
   return errors;
+}
+
+function boundedField(value: string, min: number, max: number, label: string): string | null {
+  const characters = Array.from(value).length;
+  if (characters < min || characters > max) return `${label}必须包含 ${min}–${max} 个字符。`;
+  if (/\p{Cc}/u.test(value)) return `${label}不能包含控制字符。`;
+  return null;
+}
+
+export function deviceSettingsError(settings: DeviceSettings): string | null {
+  return boundedField(settings.ssid, 1, 32, "Wi-Fi 名称")
+    ?? boundedField(settings.password, 0, 64, "Wi-Fi 密码");
+}
+
+export function ssidLooksFiveG(ssid: string): boolean {
+  return /5\s*g(?:hz)?(?![0-9a-z])/i.test(ssid);
 }

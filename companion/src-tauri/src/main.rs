@@ -12,6 +12,10 @@ fn main() {
             ventured_companion::commands::enable_live_for_run,
             ventured_companion::commands::poll_runtime_event,
             ventured_companion::commands::stop_runtime,
+            ventured_companion::commands::load_device_settings,
+            ventured_companion::commands::save_device_settings,
+            ventured_companion::commands::apply_device_config,
+            ventured_companion::commands::poll_network_status,
         ])
         .run(tauri::generate_context!())
         .expect("failed to start VentureD Companion");

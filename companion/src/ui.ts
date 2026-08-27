@@ -1,4 +1,4 @@
-import type { MappingDraft, RuntimeStatus } from "./types";
+import type { MappingDraft, NetworkState, RuntimeStatus } from "./types";
 
 export const INPUT_LABELS = {
   ENCODER_CW: "顺时针旋转",
@@ -18,6 +18,36 @@ export const RUNTIME_STATE_LABELS: Record<RuntimeStatus["state"], string> = {
   DRY_RUN: "演练模式",
   LIVE: "实时模式"
 };
+
+export const NETWORK_STATE_LABELS: Record<NetworkState, string> = {
+  UNKNOWN: "未连接",
+  DISCONNECTED: "未连接",
+  CONNECTING: "连接中",
+  CONNECTED: "已连接",
+  FAILED: "失败"
+};
+
+export const WIFI_BAND_HINT = "开发板只支持 2.4GHz Wi-Fi。5G 热点搜不到，也不会变成已连接。";
+export const WIFI_FIVE_G_ALERT = "当前名称像 5G 热点，开发板连不上。请改用 2.4GHz 名称。";
+export const WIFI_CONNECTING_STUCK_HINT = "仍在连接中：若这是 5G 热点，开发板搜不到，请改用 2.4GHz 名称。";
+
+export function networkReasonLabel(reason: string | null): string | null {
+  switch (reason) {
+    case "BAND": return "开发板仅支持 2.4GHz，当前名称像 5G 热点";
+    case "NO_AP": return "找不到这个热点；请确认 2.4GHz 名称";
+    case "AUTH": return "认证失败，请检查密码";
+    case "TIMEOUT": return "连接超时";
+    case "UNKNOWN": return "联网失败";
+    default: return null;
+  }
+}
+
+export function networkChipLabel(state: NetworkState, ip: string, reason: string | null, ssidLooksFiveG: boolean): string {
+  if (state === "CONNECTED" && ip) return `${NETWORK_STATE_LABELS[state]} ${ip}`;
+  if (reason === "BAND" || (ssidLooksFiveG && state === "FAILED")) return "失败 · 仅2.4G";
+  if (ssidLooksFiveG && state !== "CONNECTED") return `${NETWORK_STATE_LABELS[state]} · 疑似5G`;
+  return NETWORK_STATE_LABELS[state];
+}
 
 const RUNTIME_PHRASES: ReadonlyArray<readonly [string, string]> = [
   ["Dry-run started. No dispatcher constructed.", "已启动演练模式；未创建输入派发器。"],

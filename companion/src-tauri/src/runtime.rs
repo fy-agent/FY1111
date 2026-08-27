@@ -2,7 +2,11 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
+use crate::device_settings::DeviceSettings;
 use crate::input::Chord;
+use crate::network::{
+    placeholder_api_key, ssid_looks_5g, DeviceConfigRecord, NetworkState, NetworkStatus,
+};
 use crate::profile::ProfileDraft;
 use crate::serial::{EventSource, SerialError, SerialEvent};
 use crate::target::{
@@ -203,6 +207,8 @@ pub struct RuntimeStatus {
     pub live_enabled: bool,
     pub last_event: String,
     pub gap_missed: Option<u32>,
+    #[serde(default)]
+    pub network: NetworkStatus,
 }
 impl Default for RuntimeStatus {
     fn default() -> Self {
@@ -211,6 +217,7 @@ impl Default for RuntimeStatus {
             live_enabled: false,
             last_event: "No event yet.".into(),
             gap_missed: None,
+            network: NetworkStatus::default(),
         }
     }
 }
@@ -220,14 +227,41 @@ pub struct RuntimeController {
     status: RuntimeStatus,
     profile: Option<ProfileDraft>,
     source: Option<Box<dyn EventSource>>,
+    open_port: Option<(String, u32)>,
+    config_seq: u32,
 }
 impl RuntimeController {
     pub fn ensure_stopped(&self) -> Result<(), RuntimeError> {
-        if self.status.state == RuntimeMode::Stopped && self.source.is_none() {
+        if self.status.state == RuntimeMode::Stopped {
             Ok(())
         } else {
             Err(RuntimeError::AlreadyRunning)
         }
+    }
+
+    pub fn has_source(&self) -> bool {
+        self.source.is_some()
+    }
+
+    pub fn source_matches(&self, port: &str, baud: u32) -> bool {
+        self.open_port.as_ref() == Some(&(port.to_owned(), baud))
+    }
+
+    pub fn attach_source(&mut self, port: String, baud: u32, source: Box<dyn EventSource>) {
+        self.source = Some(source);
+        self.open_port = Some((port, baud));
+    }
+
+    pub fn close_source(&mut self) {
+        if let Some(source) = self.source.as_mut() {
+            source.close();
+        }
+        self.source = None;
+        self.open_port = None;
+    }
+
+    pub fn start_existing(&mut self, mode: RuntimeMode) -> Result<RuntimeStatus, RuntimeError> {
+        self.start(mode, None)
     }
 
     pub fn set_profile(&mut self, profile: ProfileDraft) -> Result<(), RuntimeError> {
@@ -245,24 +279,32 @@ impl RuntimeController {
         &mut self,
         source: Box<dyn EventSource>,
     ) -> Result<RuntimeStatus, RuntimeError> {
-        self.start(RuntimeMode::DryRun, source)
+        self.start(RuntimeMode::DryRun, Some(source))
     }
     pub fn enable_live_for_run(
         &mut self,
         source: Box<dyn EventSource>,
     ) -> Result<RuntimeStatus, RuntimeError> {
-        self.start(RuntimeMode::Live, source)
+        self.start(RuntimeMode::Live, Some(source))
     }
     fn start(
         &mut self,
         mode: RuntimeMode,
-        source: Box<dyn EventSource>,
+        source: Option<Box<dyn EventSource>>,
     ) -> Result<RuntimeStatus, RuntimeError> {
         self.ensure_stopped()?;
         if self.profile.is_none() {
             return Err(RuntimeError::ProfileRequired);
         }
-        self.source = Some(source);
+        if let Some(source) = source {
+            if let Some(previous) = self.source.as_mut() {
+                previous.close();
+            }
+            self.source = Some(source);
+        } else if self.source.is_none() {
+            return Err(RuntimeError::Serial);
+        }
+        let network = self.status.network.clone();
         self.status = RuntimeStatus {
             state: mode,
             live_enabled: mode == RuntimeMode::Live,
@@ -272,6 +314,7 @@ impl RuntimeController {
                 RuntimeMode::Stopped => unreachable!(),
             },
             gap_missed: None,
+            network,
         };
         Ok(self.status.clone())
     }
@@ -297,6 +340,7 @@ impl RuntimeController {
                 format!("{} → {} · dry-run", event.input, chord.canonical()),
             );
         }
+        self.refresh_network();
         Ok(self.status.clone())
     }
     pub fn poll_live<P, R, M, D>(
@@ -344,6 +388,7 @@ impl RuntimeController {
                 },
             );
         }
+        self.refresh_network();
         Ok(self.status.clone())
     }
     fn next_event(&mut self) -> Result<Option<SerialEvent>, RuntimeError> {
@@ -354,20 +399,98 @@ impl RuntimeController {
             .map_err(|_| RuntimeError::Serial)
     }
     pub fn stop(&mut self) -> RuntimeStatus {
-        if let Some(source) = self.source.as_mut() {
-            source.close();
-        }
-        self.source = None;
+        let network = self.status.network.clone();
         self.status = RuntimeStatus::default();
+        self.status.network = network;
         self.status.clone()
     }
     fn stop_with_last_event(&mut self, last_event: String) -> RuntimeStatus {
+        self.close_source();
         self.stop();
         self.status.last_event = last_event;
         self.status.clone()
     }
     pub fn status(&self) -> RuntimeStatus {
         self.status.clone()
+    }
+    pub fn apply_config(&mut self, settings: &DeviceSettings) -> Result<NetworkStatus, RuntimeError> {
+        let source = self.source.as_mut().ok_or(RuntimeError::Serial)?;
+        self.config_seq = self.config_seq.saturating_add(1);
+        let line = DeviceConfigRecord {
+            seq: self.config_seq,
+            ssid: settings.ssid.clone(),
+            password: settings.password.clone(),
+            api_key: placeholder_api_key(&settings.api_key),
+            model: if settings.model.trim().is_empty() {
+                crate::network::DEFAULT_CLOUD_MODEL.to_owned()
+            } else {
+                settings.model.clone()
+            },
+        }
+        .line()
+        .map_err(|_| RuntimeError::InvalidProfile)?;
+        source
+            .write_line(&line)
+            .map_err(|_| RuntimeError::Serial)?;
+        let looks_5g = ssid_looks_5g(&settings.ssid);
+        self.status.network = NetworkStatus {
+            state: if looks_5g {
+                NetworkState::Failed
+            } else {
+                NetworkState::Connecting
+            },
+            ssid: settings.ssid.clone(),
+            reason: looks_5g.then(|| "BAND".to_owned()),
+            ..NetworkStatus::default()
+        };
+        if self.status.state == RuntimeMode::Stopped {
+            self.drain_while_stopped();
+        }
+        if looks_5g {
+            if let Some(network) = self.source.as_ref().and_then(|source| source.last_network_status())
+            {
+                if network.ssid == settings.ssid && network.state == NetworkState::Failed {
+                    self.status.network = network;
+                    if self.status.network.reason.is_none() {
+                        self.status.network.reason = Some("BAND".to_owned());
+                    }
+                }
+            }
+        } else {
+            self.refresh_network();
+        }
+        Ok(self.status.network.clone())
+    }
+    pub fn poll_network(&mut self) -> NetworkStatus {
+        if self.status.state == RuntimeMode::Stopped {
+            self.drain_while_stopped();
+        }
+        self.refresh_network();
+        self.status.network.clone()
+    }
+    fn drain_while_stopped(&mut self) {
+        let serial_failed = if let Some(source) = self.source.as_mut() {
+            loop {
+                match source.poll_event() {
+                    Ok(Some(_)) => continue,
+                    Ok(None) => break false,
+                    Err(_) => break true,
+                }
+            }
+        } else {
+            false
+        };
+        if serial_failed {
+            self.close_source();
+            self.status.network.state = NetworkState::Disconnected;
+        }
+    }
+    fn refresh_network(&mut self) {
+        if let Some(source) = self.source.as_ref() {
+            if let Some(network) = source.last_network_status() {
+                self.status.network = network;
+            }
+        }
     }
 }
 pub fn resolve_event(event: &SerialEvent, profile: &ProfileDraft) -> Result<Chord, RuntimeError> {
@@ -814,5 +937,77 @@ mod tests {
     fn keyboard_guard_checks_unconfigured_modifiers_too() {
         let chord = Chord::parse(&["CTRL".into(), "TAB".into()]).unwrap();
         assert!(!keyboard_state_is_clear(&chord, |key| key == 0x12));
+    }
+
+    struct ConfigSource {
+        written: String,
+        network: Option<NetworkStatus>,
+    }
+    impl EventSource for ConfigSource {
+        fn poll_event(&mut self) -> Result<Option<SerialEvent>, SerialError> {
+            Ok(None)
+        }
+        fn write_line(&mut self, line: &str) -> Result<(), SerialError> {
+            self.written = line.to_owned();
+            self.network = Some(NetworkStatus {
+                state: NetworkState::Connecting,
+                ssid: "cafe".into(),
+                ..NetworkStatus::default()
+            });
+            Ok(())
+        }
+        fn last_network_status(&self) -> Option<NetworkStatus> {
+            self.network.clone()
+        }
+    }
+
+    #[test]
+    fn apply_config_writes_device_link_line_without_changing_shortcut_mode() {
+        let mut runtime = RuntimeController::default();
+        runtime.attach_source(
+            "fixture".into(),
+            115200,
+            Box::new(ConfigSource {
+                written: String::new(),
+                network: None,
+            }),
+        );
+        let status = runtime
+            .apply_config(&DeviceSettings {
+                version: 1,
+                ssid: "cafe".into(),
+                password: "secret".into(),
+                api_key: "sk-demo".into(),
+                model: "FunAudioLLM/SenseVoiceSmall".into(),
+            })
+            .unwrap();
+        assert_eq!(status.state, NetworkState::Connecting);
+        assert_eq!(runtime.status().state, RuntimeMode::Stopped);
+        assert_eq!(status.ssid, "cafe");
+    }
+
+    #[test]
+    fn apply_config_fails_closed_when_ssid_looks_like_5g() {
+        let mut runtime = RuntimeController::default();
+        runtime.attach_source(
+            "fixture".into(),
+            115200,
+            Box::new(ConfigSource {
+                written: String::new(),
+                network: None,
+            }),
+        );
+        let status = runtime
+            .apply_config(&DeviceSettings {
+                version: 1,
+                ssid: "Home-5G".into(),
+                password: "secret".into(),
+                api_key: "sk-demo".into(),
+                model: "FunAudioLLM/SenseVoiceSmall".into(),
+            })
+            .unwrap();
+        assert_eq!(status.state, NetworkState::Failed);
+        assert_eq!(status.reason.as_deref(), Some("BAND"));
+        assert_eq!(status.ssid, "Home-5G");
     }
 }

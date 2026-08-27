@@ -1,14 +1,18 @@
 use std::collections::VecDeque;
 use std::fmt::{Display, Formatter};
-use std::io::Read;
+use std::io::{Read, Write};
 use std::time::Duration;
 
 use serde::Deserialize;
 
 use crate::input::InputId;
+use crate::network::{NetworkState, NetworkStatus};
 
 pub const MAX_LINE_BYTES: usize = 1024;
 const PREFIX: &str = "VKEY_INPUT/1 ";
+const NET_PREFIX: &str = "VKEY_NET/1 ";
+const LOG_PREFIX: &str = "VKEY_LOG/1 ";
+const PING_PREFIX: &str = "VKEY_PING/1 ";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SerialEvent {
@@ -19,6 +23,12 @@ pub struct SerialEvent {
 
 pub trait EventSource: Send {
     fn poll_event(&mut self) -> Result<Option<SerialEvent>, SerialError>;
+    fn write_line(&mut self, _line: &str) -> Result<(), SerialError> {
+        Err(SerialError::Unavailable)
+    }
+    fn last_network_status(&self) -> Option<NetworkStatus> {
+        None
+    }
     fn close(&mut self) {}
 }
 
@@ -26,12 +36,14 @@ pub trait EventSource: Send {
 pub enum SerialError {
     Unavailable,
     Read,
+    Write,
 }
 impl Display for SerialError {
     fn fmt(&self, formatter: &mut Formatter<'_>) -> std::fmt::Result {
         formatter.write_str(match self {
             Self::Unavailable => "serial source is unavailable",
             Self::Read => "serial source read failed",
+            Self::Write => "serial source write failed",
         })
     }
 }
@@ -43,6 +55,8 @@ pub struct SerialPortSource {
     port: Box<dyn serialport::SerialPort>,
     buffered: BoundedLineBuffer,
     tracker: SequenceTracker,
+    net_tracker: SequenceTracker,
+    last_network: Option<NetworkStatus>,
 }
 
 impl SerialPortSource {
@@ -64,6 +78,8 @@ impl SerialPortSource {
             port,
             buffered: BoundedLineBuffer::default(),
             tracker: SequenceTracker::default(),
+            net_tracker: SequenceTracker::default(),
+            last_network: None,
         })
     }
 }
@@ -72,11 +88,8 @@ impl EventSource for SerialPortSource {
     fn poll_event(&mut self) -> Result<Option<SerialEvent>, SerialError> {
         loop {
             if let Some(line) = self.buffered.push(&[]) {
-                if let Some(event) = decode_line(&line) {
-                    let outcome = self.tracker.observe(event.sequence);
-                    if let Some(event) = accept_sequence(event, outcome) {
-                        return Ok(Some(event));
-                    }
+                if let Some(event) = self.accept_decoded(&line) {
+                    return Ok(Some(event));
                 }
                 continue;
             }
@@ -87,11 +100,7 @@ impl EventSource for SerialPortSource {
                     let Some(line) = self.buffered.push(&bytes[..count]) else {
                         continue;
                     };
-                    let Some(event) = decode_line(&line) else {
-                        continue;
-                    };
-                    let outcome = self.tracker.observe(event.sequence);
-                    if let Some(event) = accept_sequence(event, outcome) {
+                    if let Some(event) = self.accept_decoded(&line) {
                         return Ok(Some(event));
                     }
                 }
@@ -101,9 +110,70 @@ impl EventSource for SerialPortSource {
         }
     }
 
+    fn write_line(&mut self, line: &str) -> Result<(), SerialError> {
+        self.port
+            .write_all(line.as_bytes())
+            .map_err(|_| SerialError::Write)?;
+        if !line.ends_with('\n') {
+            self.port.write_all(b"\n").map_err(|_| SerialError::Write)?;
+        }
+        self.port.flush().map_err(|_| SerialError::Write)
+    }
+
+    fn last_network_status(&self) -> Option<NetworkStatus> {
+        self.last_network.clone()
+    }
+
     fn close(&mut self) {
         let _ = self.port.clear(serialport::ClearBuffer::All);
         self.buffered.clear();
+    }
+}
+
+impl SerialPortSource {
+    fn accept_decoded(&mut self, line: &[u8]) -> Option<SerialEvent> {
+        match decode_record(line)? {
+            DecodedLine::Input(event) => {
+                let outcome = self.tracker.observe(event.sequence);
+                accept_sequence(event, outcome)
+            }
+            DecodedLine::Network { sequence, status } => {
+                if !matches!(
+                    self.net_tracker.observe(sequence),
+                    SequenceOutcome::DuplicateOrBackward
+                ) {
+                    self.last_network = Some(merge_network(self.last_network.as_ref(), status));
+                }
+                None
+            }
+            DecodedLine::Log { message } => {
+                if let Some(current) = self.last_network.as_mut() {
+                    current.last_log = Some(message);
+                } else {
+                    self.last_network = Some(NetworkStatus {
+                        last_log: Some(message),
+                        ..NetworkStatus::default()
+                    });
+                }
+                None
+            }
+            DecodedLine::Ping {
+                host,
+                ok,
+                ms,
+                lost,
+                sent,
+            } => {
+                let mut status = self.last_network.clone().unwrap_or_default();
+                status.ping_host = Some(host);
+                status.ping_ok = Some(ok);
+                status.ping_ms = Some(ms);
+                status.ping_lost = Some(lost);
+                status.ping_sent = Some(sent);
+                self.last_network = Some(status);
+                None
+            }
+        }
     }
 }
 
@@ -185,19 +255,122 @@ struct Record {
     seq: u32,
     input: InputId,
 }
-pub fn decode_line(raw: &[u8]) -> Option<SerialEvent> {
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct NetRecord {
+    seq: u32,
+    state: NetworkState,
+    ssid: String,
+    ip: String,
+    rssi: i32,
+    #[serde(default)]
+    reason: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LogRecord {
+    #[allow(dead_code)]
+    seq: u32,
+    msg: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PingRecord {
+    #[allow(dead_code)]
+    seq: u32,
+    host: String,
+    ok: bool,
+    ms: u32,
+    lost: u32,
+    sent: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DecodedLine {
+    Input(SerialEvent),
+    Network { sequence: u32, status: NetworkStatus },
+    Log { message: String },
+    Ping {
+        host: String,
+        ok: bool,
+        ms: u32,
+        lost: u32,
+        sent: u32,
+    },
+}
+
+fn merge_network(previous: Option<&NetworkStatus>, mut status: NetworkStatus) -> NetworkStatus {
+    if let Some(previous) = previous {
+        status.ping_host = previous.ping_host.clone();
+        status.ping_ok = previous.ping_ok;
+        status.ping_ms = previous.ping_ms;
+        status.ping_lost = previous.ping_lost;
+        status.ping_sent = previous.ping_sent;
+        status.last_log = previous.last_log.clone();
+        let extra = u32::from(status.state == NetworkState::Connected);
+        status.beats = Some(previous.beats.unwrap_or(0).saturating_add(extra));
+    } else if status.state == NetworkState::Connected {
+        status.beats = Some(1);
+    }
+    status
+}
+
+pub fn decode_record(raw: &[u8]) -> Option<DecodedLine> {
     if raw.len() > MAX_LINE_BYTES {
         return None;
     }
     let line = std::str::from_utf8(raw)
         .ok()?
         .trim_end_matches(['\r', '\n']);
-    let record = serde_json::from_str::<Record>(line.strip_prefix(PREFIX)?).ok()?;
-    Some(SerialEvent {
-        sequence: record.seq,
-        input: record.input,
-        gap_missed: None,
-    })
+    if let Some(json) = line.strip_prefix(PREFIX) {
+        let record = serde_json::from_str::<Record>(json).ok()?;
+        return Some(DecodedLine::Input(SerialEvent {
+            sequence: record.seq,
+            input: record.input,
+            gap_missed: None,
+        }));
+    }
+    if let Some(json) = line.strip_prefix(NET_PREFIX) {
+        let record = serde_json::from_str::<NetRecord>(json).ok()?;
+        return Some(DecodedLine::Network {
+            sequence: record.seq,
+            status: NetworkStatus {
+                state: record.state,
+                ssid: record.ssid,
+                ip: record.ip,
+                rssi: (record.rssi != 0).then_some(record.rssi),
+                reason: record.reason.filter(|reason| !reason.is_empty()),
+                ..NetworkStatus::default()
+            },
+        });
+    }
+    if let Some(json) = line.strip_prefix(LOG_PREFIX) {
+        let record = serde_json::from_str::<LogRecord>(json).ok()?;
+        return Some(DecodedLine::Log {
+            message: record.msg,
+        });
+    }
+    if let Some(json) = line.strip_prefix(PING_PREFIX) {
+        let record = serde_json::from_str::<PingRecord>(json).ok()?;
+        return Some(DecodedLine::Ping {
+            host: record.host,
+            ok: record.ok,
+            ms: record.ms,
+            lost: record.lost,
+            sent: record.sent,
+        });
+    }
+    None
+}
+
+pub fn decode_line(raw: &[u8]) -> Option<SerialEvent> {
+    match decode_record(raw)? {
+        DecodedLine::Input(event) => Some(event),
+        DecodedLine::Network { .. } | DecodedLine::Log { .. } | DecodedLine::Ping { .. } => None,
+    }
 }
 
 #[cfg(test)]
@@ -216,6 +389,34 @@ mod tests {
         );
         assert!(decode_line(&vec![b'x'; MAX_LINE_BYTES + 1]).is_none());
         assert!(decode_line(b"VKEY_INPUT/2 {}").is_none());
+        assert!(decode_line(br#"VKEY_NET/1 {"seq":1,"state":"CONNECTED","ssid":"cafe","ip":"10.0.0.8","rssi":-40}"#).is_none());
+        let DecodedLine::Network { status, .. } = decode_record(
+            br#"VKEY_NET/1 {"seq":1,"state":"CONNECTED","ssid":"cafe","ip":"10.0.0.8","rssi":-40}"#,
+        )
+        .unwrap() else {
+            panic!("expected network record");
+        };
+        assert_eq!(status.state, NetworkState::Connected);
+        assert_eq!(status.ip, "10.0.0.8");
+        assert_eq!(status.rssi, Some(-40));
+        assert_eq!(status.reason, None);
+        let DecodedLine::Network { status, .. } = decode_record(
+            br#"VKEY_NET/1 {"seq":2,"state":"FAILED","ssid":"Home-5G","ip":"","rssi":0,"reason":"BAND"}"#,
+        )
+        .unwrap() else {
+            panic!("expected failed network record");
+        };
+        assert_eq!(status.state, NetworkState::Failed);
+        assert_eq!(status.reason.as_deref(), Some("BAND"));
+        let DecodedLine::Ping { host, ok, ms, .. } = decode_record(
+            br#"VKEY_PING/1 {"seq":4,"host":"8.8.8.8","ok":true,"ms":18,"lost":0,"sent":3}"#,
+        )
+        .unwrap() else {
+            panic!("expected ping record");
+        };
+        assert_eq!(host, "8.8.8.8");
+        assert!(ok);
+        assert_eq!(ms, 18);
     }
     #[test]
     fn tracker_reports_gaps_and_rejects_duplicates() {

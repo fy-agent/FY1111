@@ -7,10 +7,12 @@
   :source:
     - ../main/input
     - ../main/protocol
+    - ../main/display
   :include:
     - ../main
     - ../main/input
     - ../main/protocol
+    - ../main/display
 :plugins:
   :enabled:
     - module_generator

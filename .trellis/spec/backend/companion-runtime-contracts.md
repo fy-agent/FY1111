@@ -31,6 +31,10 @@ start_dry_run() -> Result<RuntimeStatus, string>
 enable_live_for_run() -> Result<RuntimeStatus, string>
 poll_runtime_event() -> Result<RuntimeStatus, string>
 stop_runtime() -> Result<RuntimeStatus, string>
+load_device_settings() -> Result<DeviceSettings, string>
+save_device_settings(draft: DeviceSettings) -> Result<DeviceSettings, string>
+apply_device_config(request) -> Result<NetworkStatus, string>
+poll_network_status() -> Result<NetworkStatus, string>
 ```
 
 React must consume these commands through one `CompanionHost` interface. It
@@ -58,7 +62,15 @@ Firmware emits one bounded UTF-8 record per line:
 VKEY_INPUT/1 {"seq":<u32>,"input":"ENCODER_CW|ENCODER_CCW|ENCODER_PRESS"}
 ```
 
-The persisted profile is exactly:
+Host-to-device Wi-Fi/API configuration and device-to-host network status use
+the additional record kinds in `protocol/device-link-v1.md`:
+
+```text
+VKEY_CONFIG/1 {"seq":<u32>,"ssid":"...","password":"...","apiKey":"...","model":"..."}
+VKEY_NET/1 {"seq":<u32>,"state":"DISCONNECTED|CONNECTING|CONNECTED|FAILED","ssid":"...","ip":"...","rssi":<i32>,"reason"?:"AUTH|TIMEOUT|NO_AP|BAND|UNKNOWN"}
+```
+
+The persisted shortcut profile is exactly:
 
 ```json
 {
@@ -77,8 +89,16 @@ The persisted profile is exactly:
 - `revision` is the SHA-256 of the complete versioned profile with `revision`
   cleared. Load validates both content and revision; save uses the submitted
   revision as the optimistic-concurrency expectation.
-- Runtime status serializes as `state`, `liveEnabled`, `lastEvent`, and
-  `gapMissed`. States are `STOPPED`, `DRY_RUN`, and `LIVE`.
+- Wi-Fi SSID/password, SiliconFlow API key, and model persist in a separate
+  `device.json` document (`version: 1`). They must not appear in
+  `profile.json`, `lastEvent`, notices, or firmware logs.
+- Runtime status serializes as `state`, `liveEnabled`, `lastEvent`,
+  `gapMissed`, and `network`. States are `STOPPED`, `DRY_RUN`, and `LIVE`.
+  `network.state` is `UNKNOWN`, `DISCONNECTED`, `CONNECTING`, `CONNECTED`, or
+  `FAILED`.
+- Apply may open the selected serial port while shortcut runtime is stopped.
+  Dry-run/live reuse that port. Stop clears shortcut mode but keeps the device
+  session so network status can continue.
 - Duplicate or backward serial sequences are dropped. A forward gap keeps the
   current valid event and reports the missed count through `gapMissed` and a
   stable `SERIAL_GAP/<n>` status.
@@ -149,11 +169,12 @@ messages.
 - TypeScript tests assert Rust-equivalent name/chord validation and saved-profile
   hydration, Chinese state/error projection including restore missing/rejected,
   command-script boundaries, and that Tauri uses the separate native bridge.
-- Browser visual tests assert exactly three mapping rows, initial stopped/live
-  off state, the configure/save/dry-run/stop flow, and no clipping, overlap, or
-  horizontal overflow. They also assert `lang="zh-CN"`, Chinese controls and
-  GPIO8 external-button wording. A frontend build is not visual-regression
-  evidence.
+- Browser visual tests assert exactly three mapping rows, a collapsed settings
+  control (no Wi-Fi fields until expanded), initial stopped/live off state, the
+  configure/save/dry-run/stop flow, the fixture apply-network flow, and no
+  clipping, overlap, or horizontal overflow. They also assert `lang="zh-CN"`,
+  Chinese controls and GPIO8 external-button wording. A frontend build is not
+  visual-regression evidence.
 - Native build proves compilation only. Real serial, foreground capture,
   profile storage, Windows input, flash, and HIL require separate evidence and
   authorization.

@@ -125,11 +125,11 @@ The Companion never reads or modifies Codex, WorkBuddy, or other third-party
 ## 5. Explicitly excluded from the current MVP
 
 - Microphone capture or audio transport.
-- Selecting or integrating an ASR provider.
+- Calling SiliconFlow transcriptions or inserting returned text.
 - TiDB Agent Stack runtime or credentials.
-- `agent_link`, ROROLEE, BLE pairing, or Wi-Fi provisioning.
+- `agent_link`, ROROLEE, or BLE pairing.
 - Automatic text insertion, clipboard mutation, or a Windows IME.
-- LCD, OLED, camera, SD card, speaker, sensor, motor, or WS2812 behavior.
+- Camera, SD card, speaker, sensor, motor, or WS2812 behavior.
 - The original VibeKey Setup UI, Hook, Observer, WorkBuddy parser,
   provisioning, identity, MSC installer, security HID, application catalogs,
   or S1-S16 profile system.
@@ -155,7 +155,7 @@ Documented Board C resources:
 | Rotary channels | CLK GPIO6, DT GPIO7 | enabled |
 | Independent action input | GPIO8 | implemented in firmware, physical wiring pending |
 | Digital microphone | WS GPIO42, SD GPIO2, SCK GPIO41 | reserved, disabled |
-| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | reserved, disabled |
+| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | network status screen |
 | WS2812 | GPIO48 | reserved, disabled |
 | Optional pull-up button | GPIO12 | reserved, disabled |
 

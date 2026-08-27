@@ -25,4 +25,6 @@ records are rejected; forward gaps are reported while the valid record can
 continue.
 
 Push-to-talk and microphone data require a new record kind or protocol version.
-They must never be represented as an encoder shortcut input.
+They must never be represented as an encoder shortcut input. Wi-Fi configuration
+and network status use `protocol/device-link-v1.md` and must not reuse
+`VKEY_INPUT/1`.

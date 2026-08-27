@@ -1,6 +1,8 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 
+pub mod device_settings;
 pub mod input;
+pub mod network;
 pub mod profile;
 pub mod runtime;
 pub mod serial;
@@ -11,6 +13,8 @@ use serde::{Deserialize, Serialize};
 
 pub mod commands {
     use super::*;
+    use crate::device_settings::{DeviceSettings, DeviceSettingsStore};
+    use crate::network::NetworkStatus;
     use crate::profile::{ProfileDraft, ProfileStore, ProfileTarget};
     use crate::runtime::{
         RuntimeController, RuntimeError, RuntimeMode, RuntimeStatus, WindowsInputDispatcher,
@@ -46,6 +50,51 @@ pub mod commands {
             .app_config_dir()
             .map_err(|_| "profile storage is unavailable".to_owned())?;
         Ok(ProfileStore::new(directory.join("profile.json")))
+    }
+
+    fn device_store(app: &tauri::AppHandle) -> Result<DeviceSettingsStore, String> {
+        let directory = app
+            .path()
+            .app_config_dir()
+            .map_err(|_| "device settings storage is unavailable".to_owned())?;
+        Ok(DeviceSettingsStore::new(directory.join("device.json")))
+    }
+
+    fn ensure_device_source(
+        runtime: &mut RuntimeController,
+        port: &str,
+        baud: u32,
+    ) -> Result<(), String> {
+        if runtime.source_matches(port, baud) {
+            return Ok(());
+        }
+        runtime
+            .ensure_stopped()
+            .map_err(|error| error.to_string())?;
+        runtime.close_source();
+        let source = SerialPortSource::open(port, baud)
+            .map_err(|_| "selected serial port could not be opened".to_owned())?;
+        runtime.attach_source(port.to_owned(), baud, Box::new(source));
+        Ok(())
+    }
+
+    fn start_shortcut(
+        runtime: &mut RuntimeController,
+        port: &str,
+        baud: u32,
+        mode: RuntimeMode,
+    ) -> Result<RuntimeStatus, String> {
+        if runtime.source_matches(port, baud) {
+            return runtime.start_existing(mode).map_err(|error| error.to_string());
+        }
+        runtime
+            .ensure_stopped()
+            .map_err(|error| error.to_string())?;
+        runtime.close_source();
+        let source = SerialPortSource::open(port, baud)
+            .map_err(|_| "selected serial port could not be opened".to_owned())?;
+        runtime.attach_source(port.to_owned(), baud, Box::new(source));
+        runtime.start_existing(mode).map_err(|error| error.to_string())
     }
 
     pub fn save_profile_to_store(
@@ -155,11 +204,7 @@ pub mod commands {
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
         let profile = load_profile_into_runtime(&store, &mut runtime)?;
-        let source = SerialPortSource::open(&profile.serial.port, profile.serial.baud)
-            .map_err(|_| "selected serial port could not be opened".to_owned())?;
-        runtime
-            .start_dry_run(Box::new(source))
-            .map_err(|error| error.to_string())
+        start_shortcut(&mut runtime, &profile.serial.port, profile.serial.baud, RuntimeMode::DryRun)
     }
 
     #[tauri::command]
@@ -173,11 +218,7 @@ pub mod commands {
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
         let profile = load_profile_into_runtime(&store, &mut runtime)?;
-        let source = SerialPortSource::open(&profile.serial.port, profile.serial.baud)
-            .map_err(|_| "selected serial port could not be opened".to_owned())?;
-        runtime
-            .enable_live_for_run(Box::new(source))
-            .map_err(|error| error.to_string())
+        start_shortcut(&mut runtime, &profile.serial.port, profile.serial.baud, RuntimeMode::Live)
     }
 
     #[tauri::command]
@@ -201,6 +242,64 @@ pub mod commands {
     #[tauri::command]
     pub fn stop_runtime(state: tauri::State<'_, AppState>) -> Result<RuntimeStatus, String> {
         Ok(state.runtime()?.stop())
+    }
+
+    #[tauri::command]
+    pub fn load_device_settings(
+        app: tauri::AppHandle,
+    ) -> Result<DeviceSettings, String> {
+        Ok(device_store(&app)?
+            .load()
+            .map_err(|_| "saved device settings are invalid".to_owned())?
+            .unwrap_or_default())
+    }
+
+    #[tauri::command]
+    pub fn save_device_settings(
+        app: tauri::AppHandle,
+        draft: DeviceSettings,
+    ) -> Result<DeviceSettings, String> {
+        device_store(&app)?
+            .save(draft)
+            .map_err(|error| error.to_string())
+    }
+
+    #[derive(Debug, Clone, serde::Deserialize)]
+    #[serde(rename_all = "camelCase", deny_unknown_fields)]
+    pub struct ApplyDeviceConfigRequest {
+        pub port: String,
+        pub baud: u32,
+        pub settings: DeviceSettings,
+    }
+
+    #[tauri::command]
+    pub fn apply_device_config(
+        app: tauri::AppHandle,
+        state: tauri::State<'_, AppState>,
+        request: ApplyDeviceConfigRequest,
+    ) -> Result<NetworkStatus, String> {
+        if request.port.trim().is_empty() || request.baud == 0 {
+            return Err("a serial port is required".to_owned());
+        }
+        request
+            .settings
+            .validate()
+            .map_err(|error| error.to_string())?;
+        let saved = device_store(&app)?
+            .save(request.settings)
+            .map_err(|error| error.to_string())?;
+        let mut runtime = state.runtime()?;
+        ensure_device_source(&mut runtime, &request.port, request.baud)?;
+        runtime
+            .apply_config(&saved)
+            .map_err(|error| error.to_string())
+    }
+
+    #[tauri::command]
+    pub fn poll_network_status(
+        state: tauri::State<'_, AppState>,
+    ) -> Result<NetworkStatus, String> {
+        Ok(state.runtime()?.poll_network())
     }
 
     pub fn target_from_draft(draft: TargetDraft) -> Result<ProfileTarget, String> {

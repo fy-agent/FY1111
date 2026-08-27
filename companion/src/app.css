@@ -8,6 +8,17 @@ header { justify-content: space-between; border-bottom: 1px solid #e6eaf0; paddi
 h1 { margin: 0; font-size: 1.35rem; } p { margin: 4px 0 0; color: #5d687a; overflow-wrap: anywhere; }
 .state { border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: .8rem; background: #e9edf4; }.state.dry-run { background: #fff1c7; color: #765500; }.state.live { background: #ffe0e7; color: #a02b4d; }
 .device, .target { margin-top: 18px; }.device label { display: grid; gap: 4px; flex: 1; }.device select { width: 100%; }.target { justify-content: space-between; padding: 14px; background: #f7f9fc; border-radius: 10px; }.target p { max-width: 440px; }
+.settings { margin-top: 16px; border: 1px solid #e1e7f0; border-radius: 12px; background: #f8fafc; }
+.settings-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; border: 0; background: transparent; padding: 12px 14px; }
+.settings-toggle strong { font-size: .95rem; }
+.net { border-radius: 999px; padding: 4px 8px; font-size: .78rem; font-weight: 700; background: #e7edf6; color: #3d4a63; }
+.net.connecting { background: #fff1c7; color: #765500; } .net.connected { background: #d9f6e3; color: #0f6b38; } .net.failed { background: #ffe0e7; color: #a02b4d; }
+.settings-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px 14px; }
+.settings-panel label { display: grid; gap: 4px; font-size: .85rem; color: #4d5a70; }
+.settings-panel button, .settings-panel small, .settings-panel p { grid-column: 1 / -1; }
+.settings-panel p { margin: 0; color: #5d687a; font-size: .85rem; }
+.settings-panel .hint { background: #fff1c7; color: #765500; padding: 8px 10px; border-radius: 8px; }
+.settings-panel .warn, .settings-panel small.warn { color: #a02b4d; font-weight: 600; }
 .mappings { display: grid; gap: 10px; margin-top: 18px; }.mapping { display: grid; grid-template-columns: 144px minmax(120px, 1fr) minmax(105px, .8fr) minmax(90px, .6fr); gap: 8px; align-items: center; }.mapping small { grid-column: 2 / -1; color: #b4233e; }.canonical { color: #43506a; font-size: .85rem; overflow-wrap: anywhere; }.chord { width: 100%; min-width: 0; text-align: left; }.chord.listening { background: #eef4ff; outline: 2px solid #49699c; }
 .controls { flex-wrap: wrap; margin-top: 20px; }.live { background: #7a1e3a; color: white; } button { border: 1px solid #bac5d8; background: #fff; border-radius: 8px; padding: 8px 11px; cursor: pointer; }button:disabled { cursor: not-allowed; opacity: .48; }input, select { min-width: 0; border: 1px solid #bac5d8; border-radius: 7px; padding: 8px; }footer { margin-top: 20px; padding: 12px; border-left: 3px solid #49699c; background: #f6f8fb; font-size: .9rem; }footer span { color: #536078; }
-@media (max-width: 620px) { .window { width: calc(100vw - 20px); margin: 10px auto; padding: 16px; }.device, .target { align-items: stretch; flex-direction: column; }.mapping { grid-template-columns: 1fr; }.mapping small { grid-column: 1; } }
+@media (max-width: 620px) { .window { width: calc(100vw - 20px); margin: 10px auto; padding: 16px; }.device, .target { align-items: stretch; flex-direction: column; }.mapping { grid-template-columns: 1fr; }.mapping small { grid-column: 1; }.settings-panel { grid-template-columns: 1fr; } }

@@ -1,0 +1,4 @@
+{"file": ".trellis/spec/backend/companion-runtime-contracts.md", "reason": "Command surface, three mapping rows, secret isolation"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "Check conventions"}
+{"file": ".trellis/spec/frontend/quality-guidelines.md", "reason": "UI language and fixture checks"}
+{"file": ".trellis/tasks/08-27-wifi-oled-settings/research/siliconflow-and-reuse.md", "reason": "Do not implement upload in this increment"}

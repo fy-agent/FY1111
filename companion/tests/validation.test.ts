@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { canonicalChord, chordIdentity, displayNameError, mappingErrors, modifiersFromKeyboardEvent, primaryFromKeyboardEvent } from "../src/validation";
+import { canonicalChord, chordIdentity, deviceSettingsError, displayNameError, mappingErrors, modifiersFromKeyboardEvent, primaryFromKeyboardEvent, ssidLooksFiveG } from "../src/validation";
 import { createFixtureHost } from "../src/host";
-import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, RUNTIME_STATE_LABELS } from "../src/ui";
+import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, NETWORK_STATE_LABELS, RUNTIME_STATE_LABELS, WIFI_BAND_HINT, networkChipLabel, networkReasonLabel } from "../src/ui";
 import packageJson from "../package.json";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -68,6 +68,30 @@ describe("mapping validation", () => {
     expect((await host.pollRuntimeEvent()).state).toBe("LIVE");
     expect((await host.stop()).liveEnabled).toBe(false);
     expect((await host.pollRuntimeEvent()).state).toBe("STOPPED");
+    expect((await host.pollRuntimeEvent()).network.state).toBe("UNKNOWN");
+    const network = await host.applyDeviceConfig("浏览器夹具串口", 115200, {
+      version: 1,
+      ssid: "cafe",
+      password: "secret",
+      apiKey: "sk-demo",
+      model: "FunAudioLLM/SenseVoiceSmall"
+    });
+    expect(network).toMatchObject({ state: "CONNECTED", ip: "10.0.0.8", ssid: "cafe" });
+    expect((await host.loadDeviceSettings()).apiKey).toBe("sk-demo");
+    expect(NETWORK_STATE_LABELS.CONNECTED).toBe("已连接");
+    expect(deviceSettingsError({ version: 1, ssid: "", password: "", apiKey: "", model: "FunAudioLLM/SenseVoiceSmall" })).toContain("Wi-Fi 名称");
+    expect(ssidLooksFiveG("Home-5G")).toBe(true);
+    expect(ssidLooksFiveG("5guys")).toBe(false);
+    expect(networkChipLabel("FAILED", "", "BAND", true)).toBe("失败 · 仅2.4G");
+    expect(networkReasonLabel("BAND")).toContain("5G");
+    expect(WIFI_BAND_HINT).toContain("2.4GHz");
+    await expect(host.applyDeviceConfig("浏览器夹具串口", 115200, {
+      version: 1,
+      ssid: "Home-5G",
+      password: "secret",
+      apiKey: "sk-demo",
+      model: "FunAudioLLM/SenseVoiceSmall"
+    })).resolves.toMatchObject({ state: "FAILED", reason: "BAND" });
   });
   it("maps a recorded keyboard event to the same chord tokens the host persists", () => {
     expect(primaryFromKeyboardEvent({ code: "Tab", key: "Tab" })).toBe("TAB");
