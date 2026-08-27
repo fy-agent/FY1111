@@ -1,0 +1,13 @@
+:root { color: #172033; background: #edf1f6; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select { font: inherit; }
+.window { width: min(720px, calc(100vw - 32px)); margin: 24px auto; padding: 24px; border: 1px solid #d7deea; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px #20305018; }
+header, .device, .target, .controls { display: flex; gap: 12px; align-items: center; }
+header { justify-content: space-between; border-bottom: 1px solid #e6eaf0; padding-bottom: 16px; }
+h1 { margin: 0; font-size: 1.35rem; } p { margin: 4px 0 0; color: #5d687a; overflow-wrap: anywhere; }
+.state { border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: .8rem; background: #e9edf4; }.state.dry-run { background: #fff1c7; color: #765500; }.state.live { background: #ffe0e7; color: #a02b4d; }
+.device, .target { margin-top: 18px; }.device label { display: grid; gap: 4px; flex: 1; }.device select { width: 100%; }.target { justify-content: space-between; padding: 14px; background: #f7f9fc; border-radius: 10px; }.target p { max-width: 440px; }
+.mappings { display: grid; gap: 10px; margin-top: 18px; }.mapping { display: grid; grid-template-columns: 144px minmax(120px, 1fr) minmax(105px, .8fr) minmax(90px, .6fr); gap: 8px; align-items: center; }.mapping small { grid-column: 2 / -1; color: #b4233e; }.canonical { color: #43506a; font-size: .85rem; overflow-wrap: anywhere; }.chord { width: 100%; min-width: 0; text-align: left; }.chord.listening { background: #eef4ff; outline: 2px solid #49699c; }
+.controls { flex-wrap: wrap; margin-top: 20px; }.live { background: #7a1e3a; color: white; } button { border: 1px solid #bac5d8; background: #fff; border-radius: 8px; padding: 8px 11px; cursor: pointer; }button:disabled { cursor: not-allowed; opacity: .48; }input, select { min-width: 0; border: 1px solid #bac5d8; border-radius: 7px; padding: 8px; }footer { margin-top: 20px; padding: 12px; border-left: 3px solid #49699c; background: #f6f8fb; font-size: .9rem; }footer span { color: #536078; }
+@media (max-width: 620px) { .window { width: calc(100vw - 20px); margin: 10px auto; padding: 16px; }.device, .target { align-items: stretch; flex-direction: column; }.mapping { grid-template-columns: 1fr; }.mapping small { grid-column: 1; } }

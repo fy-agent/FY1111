@@ -1,0 +1,10 @@
+menu "VentureD Board C demo"
+
+config VENTURED_ENCODER_INVERT_DIRECTION
+    bool "Invert encoder direction"
+    default n
+    help
+        Reverse the semantic clockwise/counter-clockwise events without
+        changing Board C pin ownership.
+
+endmenu

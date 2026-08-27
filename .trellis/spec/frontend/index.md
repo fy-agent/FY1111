@@ -21,6 +21,12 @@ This directory contains guidelines for frontend development. Fill in each file w
 | [Quality Guidelines](./quality-guidelines.md) | Code standards, forbidden patterns | To fill |
 | [Type Safety](./type-safety.md) | Type patterns, validation | To fill |
 
+## Cross-layer contracts
+
+- [Companion Runtime Contracts](../backend/companion-runtime-contracts.md) —
+  required when changing the Board C profile, Tauri host surface, runtime
+  state, serial-event projection, or Companion UI behavior.
+
 ---
 
 ## How to Fill These Guidelines

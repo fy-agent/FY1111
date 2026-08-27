@@ -1,0 +1,5 @@
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Review copied/adapted behavior for drift, duplicate constants, and untracked second implementations."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Review protocol, profile, runtime, and UI round trips plus typed ownership at each boundary."}
+{"file":".trellis/tasks/08-27-vibekey-hardware-hackathon-demo/research/board-and-source-baseline.md","reason":"Verify Board C resources, source read-only invariants, exclusions, provenance hashes, and evidence limits."}
+{"file":".trellis/tasks/08-27-vibekey-hardware-hackathon-demo/research/companion-reuse-expansion-audit.md","reason":"Verify restore and Hook inspection were copied from source rather than redesigned, and that Setup/proposal code stayed out."}
+{"file":".trellis/spec/backend/companion-runtime-contracts.md","reason":"Verify restore, Hook redaction, and runtime/UI projections still match the Companion contracts."}

@@ -1,0 +1,40 @@
+# OS and editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+.idea/
+.vscode/
+*.log
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# ESP-IDF / Ceedling generated output
+firmware/board-c-demo/build*/
+firmware/board-c-demo/sdkconfig
+firmware/board-c-demo/sdkconfig.old
+firmware/board-c-demo/dependencies.lock
+firmware/board-c-demo/managed_components/
+firmware/board-c-demo/host_tests/build/
+
+# Companion generated output
+companion/node_modules/
+companion/dist/
+companion/src-tauri/target/
+companion/src-tauri/gen/
+companion/test-results/
+companion/playwright-report/
+companion/playwright/.cache/
+companion/*.local
+companion/.env
+companion/.env.local
+
+# Rust / cargo
+**/target/
+**/*.pdb

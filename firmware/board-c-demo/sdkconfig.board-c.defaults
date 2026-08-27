@@ -1,0 +1,4 @@
+# Board C flash/PSRAM settings intentionally use ESP-IDF detection defaults.
+# Do not add a module-size assumption until the supplied core module is known.
+CONFIG_IDF_TARGET="esp32s3"
+

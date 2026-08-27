@@ -1,0 +1,4 @@
+{"file":".trellis/spec/guides/code-reuse-thinking-guide.md","reason":"Reuse selected VibeKey behavior without duplicating constants, protocol parsing, or validation ownership."}
+{"file":".trellis/spec/guides/cross-layer-thinking-guide.md","reason":"Keep firmware event, Rust DTO/profile, Tauri commands, and React projections aligned across boundaries."}
+{"file":".trellis/tasks/08-27-vibekey-hardware-hackathon-demo/research/board-and-source-baseline.md","reason":"Use the verified Board C pins, toolchain baseline, source commit, exclusions, and hashes during implementation."}
+{"file":".trellis/spec/backend/companion-runtime-contracts.md","reason":"Keep serial, profile, runtime, Tauri, and fail-closed contracts aligned for capture, restore, and three shortcut mappings."}

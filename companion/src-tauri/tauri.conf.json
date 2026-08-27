@@ -1,0 +1,9 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VentureD Companion",
+  "version": "0.1.0",
+  "identifier": "com.ventured.boardc-companion",
+  "build": { "frontendDist": "../dist", "devUrl": "http://127.0.0.1:1425", "beforeDevCommand": "pnpm dev:native", "beforeBuildCommand": "pnpm build" },
+  "app": { "windows": [{ "title": "VentureD Companion", "width": 760, "height": 780, "resizable": true }] },
+  "bundle": { "active": false, "icon": ["icons/icon.ico"] }
+}

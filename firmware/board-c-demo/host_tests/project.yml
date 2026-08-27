@@ -1,0 +1,16 @@
+:project:
+  :build_root: build
+  :which_ceedling: gem
+:paths:
+  :test:
+    - test
+  :source:
+    - ../main/input
+    - ../main/protocol
+  :include:
+    - ../main
+    - ../main/input
+    - ../main/protocol
+:plugins:
+  :enabled:
+    - module_generator
