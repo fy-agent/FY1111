@@ -24,8 +24,9 @@ Board C rotary input
 
 The longer-term product direction is a context-aware voice input device that
 can remember and correct domain terms such as `trellis` and `workbuddy`, then
-insert recognized text into the active application. That voice path is a
-future extension and is not implemented in the current demo.
+insert recognized text into the active application. Board C can already
+record GPIO9 audio and show SiliconFlow XingChen text; focused-window
+insertion is still a later extension.
 
 ## 2. Repositories and ownership boundaries
 
@@ -33,8 +34,9 @@ future extension and is not implemented in the current demo.
 
 - Path: `C:\Users\xk\Desktop\VentureD`
 - Branch: `master`
-- Archived Trellis task:
+- Archived Trellis tasks:
   `.trellis/tasks/archive/2026-08/08-27-vibekey-hardware-hackathon-demo`
+  `.trellis/tasks/archive/2026-08/08-27-wifi-oled-settings`
 - Task status: `completed`
 - Demo source is committed on `master`. Generated IDF, Cargo, and Companion
   outputs stay gitignored. Inspect `git status` before editing and do not
@@ -124,8 +126,8 @@ The Companion never reads or modifies Codex, WorkBuddy, or other third-party
 
 ## 5. Explicitly excluded from the current MVP
 
-- Microphone capture or audio transport.
-- Calling SiliconFlow transcriptions or inserting returned text.
+- Automatic insertion of transcribed text into a focused desktop window.
+- Calling SiliconFlow from the Companion host (upload is on-device).
 - TiDB Agent Stack runtime or credentials.
 - `agent_link`, ROROLEE, or BLE pairing.
 - Automatic text insertion, clipboard mutation, or a Windows IME.
@@ -154,8 +156,9 @@ Documented Board C resources:
 | --- | --- | --- |
 | Rotary channels | CLK GPIO6, DT GPIO7 | enabled |
 | Independent action input | GPIO8 | implemented in firmware, physical wiring pending |
-| Digital microphone | WS GPIO42, SD GPIO2, SCK GPIO41 | reserved, disabled |
-| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | network status screen |
+| Digital microphone | WS GPIO42, SD GPIO2, SCK GPIO41 | I2S RX hold-to-talk on GPIO9 |
+| Mic start button | GPIO9, active-low pull-up | enabled; never `VKEY_INPUT/1` |
+| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | network / rec / ASR status |
 | WS2812 | GPIO48 | reserved, disabled |
 | Optional pull-up button | GPIO12 | reserved, disabled |
 
@@ -288,8 +291,8 @@ Known remaining items after the archived demo task:
 - competition-level HIL sign-off for encoder CW/CCW and GPIO8 restore plus
   shortcut dispatch;
 - recorded evidence for a real live `SendInput` path on the captured target;
-- any microphone, ASR, `agent_link`, ROROLEE, TiDB Agent, or text-insertion
-  integration.
+- focused-window insertion of `VKEY_ASR/1` text;
+- `agent_link`, ROROLEE, TiDB Agent, or any other cloud agent path.
 
 ## 11. Verification and authorization boundaries
 
