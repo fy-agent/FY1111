@@ -116,3 +116,40 @@ Committed hand-gesture ASR, Companion transcript, and 可录音 ready state; arc
 
 - Do not archive 00-bootstrap-guidelines
 - Focused-window insertion of ASR text is still out of scope
+
+
+## Session 4: Archive HID Vendor USB and push Board C auto-link
+
+**Date**: 2026-08-28
+**Task**: Archive HID Vendor USB and push Board C auto-link
+**Branch**: `main`
+
+### Summary
+
+Replaced COM picker with HID+Vendor USB auto-link and archived 08-28-board-c-hid-vendor-usb.
+
+### Main Changes
+
+- TinyUSB HID+Vendor transport; Companion hidapi auto-connect; no COM picker
+- Default GPIO11 ENTER, GPIO10 CTRL+N, GPIO8 CTRL+SHIFT+N; obsolete 3-row profile save
+- Archived 08-28-board-c-hid-vendor-usb; left 00-bootstrap-guidelines active
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `6659e01` | (see git log) |
+| `0967a18` | (see git log) |
+
+### Testing
+
+- [OK] ceedling hid_frame + companion check:software + Windows VID_303A PID_82D0 enum
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Do not archive 00-bootstrap-guidelines
+- Later flashes use ROM download (BOOT+RESET); focused-window ASR insert still out of scope
