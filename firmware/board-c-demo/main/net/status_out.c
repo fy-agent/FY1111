@@ -8,6 +8,7 @@
 #include "freertos/task.h"
 
 #include "protocol/link_debug.h"
+#include "usb/ventured_link.h"
 
 static QueueHandle_t s_status_q;
 static QueueHandle_t s_log_q;
@@ -21,8 +22,7 @@ static void status_task(void *arg) {
         while (xQueueReceive(s_log_q, message, 0) == pdTRUE) {
             char record[256];
             if (ventured_format_log_event(record, sizeof(record), ++s_log_seq, message)) {
-                fputs(record, stdout);
-                fflush(stdout);
+                ventured_link_write(record);
             }
         }
         ventured_net_status_t status;

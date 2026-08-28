@@ -22,6 +22,7 @@
 #include "pcm_metrics.h"
 #include "protocol/rec_event.h"
 #include "rec_gate.h"
+#include "usb/ventured_link.h"
 
 static const char *TAG = "board_c_mic";
 #define SCAN_PERIOD_MS 10U
@@ -91,8 +92,7 @@ static void clear_keep(void) {
 static void emit_rec(const ventured_rec_status_t *status) {
     char record[192];
     if (!ventured_format_rec_event(record, sizeof(record), status)) return;
-    fputs(record, stdout);
-    fflush(stdout);
+    ventured_link_write(record);
 }
 
 static ventured_rec_status_t rec_from_metrics(ventured_rec_state_t state, const ventured_pcm_metrics_t *metrics,

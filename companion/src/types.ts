@@ -21,6 +21,9 @@ export interface ProfileDraft {
   target: TargetDraft | null;
   mappings: MappingDraft[];
 }
+export const USB_LINK_ID = "usb:ventured";
+export const USB_LINK_BAUD = 115200;
+
 export interface SerialDraft {
   port: string;
   baud: number;

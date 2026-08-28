@@ -1,0 +1,8 @@
+#pragma once
+
+enum {
+    VENTURED_USB_VID = 0x303A,
+    VENTURED_USB_PID = 0x82D0,
+    VENTURED_HID_REPORT_LEN = 64,
+    VENTURED_HID_PAYLOAD_MAX = 63,
+};

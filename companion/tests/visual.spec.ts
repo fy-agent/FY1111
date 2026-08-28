@@ -12,6 +12,8 @@ test("中文夹具窗口无横向溢出，并展示五个固定输入行", async
   await expect(page.getByRole("button", { name: "为本次运行启用实时模式" })).toBeDisabled();
   await expect(page.getByText("尚未捕获。请先切到目标应用，再点 3 秒后捕获。")).toBeVisible();
   await expect(page.getByRole("button", { name: "设置 未连接" })).toBeVisible();
+  await expect(page.getByLabel("设备连接")).toBeVisible();
+  await expect(page.getByText("已插入")).toBeVisible();
   await expect(page.getByLabel("转写结果")).toBeVisible();
   await expect(page.getByText("可录音")).toBeVisible();
   await expect(page.getByText("说完后，转写会出现在这里。")).toBeVisible();
@@ -25,9 +27,10 @@ test("中文夹具窗口无横向溢出，并展示五个固定输入行", async
   await expect(page).toHaveScreenshot("companion-fixture.png", { fullPage: true });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBeTruthy();
 
-  await page.getByRole("button", { name: "刷新" }).click();
-  await expect(page.getByText("已刷新串口列表，未打开任何串口。")).toBeVisible();
-  await page.getByRole("combobox", { name: "设备串口" }).selectOption("浏览器夹具串口");
+  await expect(page.getByLabel("设备连接")).toBeVisible();
+  await expect(page.getByText("插入即可连接，无需选择串口")).toBeVisible();
+  await expect(page.getByText("已插入")).toBeVisible();
+  await expect(page.getByText("请选择串口")).toHaveCount(0);
   await page.getByRole("button", { name: "3 秒后捕获" }).click();
   await page.getByRole("button", { name: "保存配置" }).click();
   await expect(page.getByRole("button", { name: "启动演练模式" })).toBeEnabled();
@@ -55,8 +58,8 @@ test("中文夹具窗口无横向溢出，并展示五个固定输入行", async
   await expect(page.getByLabel("SiliconFlow API Key")).toBeVisible();
   await expect(page.getByLabel("转写模型")).toBeVisible();
   await expect(page.getByText("API Key 可留空")).toBeVisible();
-  await expect(page.getByText(/按住 GPIO9/)).toBeVisible();
-  await expect(page.getByText(/人体感应接 GPIO16/)).toBeVisible();
+  await expect(page.getByText(/GPIO9 仍可按住/)).toBeVisible();
+  await expect(page.getByText(/GPIO16 人体感应/)).toBeVisible();
   await expect(page.getByRole("button", { name: "显示Wi-Fi 密码" })).toBeVisible();
   await page.getByRole("button", { name: "保存并下发联网" }).click();
   await expect(page.getByText("设备已联网。")).toBeVisible();

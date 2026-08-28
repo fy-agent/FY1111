@@ -103,9 +103,11 @@ The persisted shortcut profile is exactly:
   `gapMissed`, and `network`. States are `STOPPED`, `DRY_RUN`, and `LIVE`.
   `network.state` is `UNKNOWN`, `DISCONNECTED`, `CONNECTING`, `CONNECTED`, or
   `FAILED`.
-- Apply may open the selected serial port while shortcut runtime is stopped.
-  Dry-run/live reuse that port. Stop clears shortcut mode but keeps the device
-  session so network status can continue.
+- Apply auto-opens the Board C HID link (`usb:ventured`, VID `0x303A`,
+  PID `0x82D0`) while shortcut runtime is stopped. There is no COM picker.
+  Dry-run/live reuse that link. Stop clears shortcut mode but keeps the device
+  session so network status can continue. An obsolete three-row profile is
+  invalid to load and may be replaced by the next valid five-row save.
 - Duplicate or backward serial sequences are dropped. A forward gap keeps the
   current valid event and reports the missed count through `gapMissed` and a
   stable `SERIAL_GAP/<n>` status.
@@ -143,7 +145,7 @@ The persisted shortcut profile is exactly:
 | Live event after restore | Recheck exact foreground process name/path before modifiers or `SendInput`. |
 | Serial read error | Close the source, enter `STOPPED`, clear live permission, and report a stable stopped reason. |
 | UI stop request fails | Do not claim `STOPPED` or clear the displayed live state locally; preserve active/unknown state and allow retry. |
-| Ordinary development command | Use the browser fixture and perform no native/firmware build, COM access, foreground probe, profile write, or input dispatch. |
+| Ordinary development command | Use the browser fixture and perform no native/firmware build, USB HID access, foreground probe, profile write, or input dispatch. |
 | Explicit later Tauri integration | Use `dev:native`; never inherit fixture mode from the ordinary `dev` alias. |
 | User-visible English runtime text | Project it to Chinese before rendering; preserve only allowed technical identifiers. |
 

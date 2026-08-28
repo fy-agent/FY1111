@@ -682,9 +682,9 @@ mod tests {
                     keys: match input {
                         InputId::EncoderCw => vec!["CTRL".into(), "TAB".into()],
                         InputId::EncoderCcw => vec!["CTRL".into(), "SHIFT".into(), "TAB".into()],
-                        InputId::EncoderPress => vec!["ENTER".into()],
-                        InputId::ButtonA => vec!["CTRL".into(), "1".into()],
-                        InputId::ButtonB => vec!["CTRL".into(), "2".into()],
+                        InputId::EncoderPress => vec!["CTRL".into(), "SHIFT".into(), "N".into()],
+                        InputId::ButtonA => vec!["CTRL".into(), "N".into()],
+                        InputId::ButtonB => vec!["ENTER".into()],
                     },
                 })
                 .collect(),

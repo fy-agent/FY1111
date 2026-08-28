@@ -132,13 +132,21 @@ impl ProfileStore {
         }
         Ok(Some(profile))
     }
+    fn load_current(&self) -> Result<Option<ProfileDraft>, ProfileError> {
+        match self.load() {
+            Ok(profile) => Ok(profile),
+            Err(ProfileError::Invalid) if self.path.exists() => Ok(None),
+            Err(error) => Err(error),
+        }
+    }
+
     pub fn save(
         &self,
         draft: ProfileDraft,
         expected_revision: Option<&str>,
     ) -> Result<ProfileDraft, ProfileError> {
         draft.validate()?;
-        let previous = self.load()?;
+        let previous = self.load_current()?;
         if previous
             .as_ref()
             .and_then(|profile| profile.revision.as_deref())
@@ -154,12 +162,9 @@ impl ProfileStore {
         if let Some(parent) = self.path.parent() {
             fs::create_dir_all(parent).map_err(|_| ProfileError::Invalid)?;
         }
-        if let Some(existing) = self.load()? {
-            fs::write(
-                self.path.with_extension("json.bak"),
-                serde_json::to_vec_pretty(&existing).map_err(|_| ProfileError::Invalid)?,
-            )
-            .map_err(|_| ProfileError::Invalid)?;
+        if self.path.exists() {
+            let raw = fs::read(&self.path).map_err(|_| ProfileError::Invalid)?;
+            fs::write(self.path.with_extension("json.bak"), raw).map_err(|_| ProfileError::Invalid)?;
         }
         let temporary = self.path.with_extension("json.tmp");
         fs::write(&temporary, bytes).map_err(|_| ProfileError::Invalid)?;
@@ -200,18 +205,18 @@ mod tests {
                 },
                 MappingDraft {
                     input: InputId::EncoderPress,
-                    display_name: "Confirm".into(),
-                    keys: vec!["ENTER".into()],
+                    display_name: "New window".into(),
+                    keys: vec!["CTRL".into(), "SHIFT".into(), "N".into()],
                 },
                 MappingDraft {
                     input: InputId::ButtonA,
-                    display_name: "Key A".into(),
-                    keys: vec!["CTRL".into(), "1".into()],
+                    display_name: "New".into(),
+                    keys: vec!["CTRL".into(), "N".into()],
                 },
                 MappingDraft {
                     input: InputId::ButtonB,
-                    display_name: "Key B".into(),
-                    keys: vec!["CTRL".into(), "2".into()],
+                    display_name: "Confirm".into(),
+                    keys: vec!["ENTER".into()],
                 },
             ],
         }
@@ -232,6 +237,21 @@ mod tests {
             Err(ProfileError::Stale)
         );
     }
+    #[test]
+    fn save_replaces_an_obsolete_three_row_profile() {
+        let directory = tempdir().unwrap();
+        let store = ProfileStore::new(directory.path().join("profile.json"));
+        fs::write(
+            store.path(),
+            br#"{"version":1,"revision":"sha256:dead","serial":{"port":"COM9","baud":115200},"target":{"processName":"Fixture.exe","processPath":"C:\\Fixture.exe"},"mappings":[{"input":"ENCODER_CW","displayName":"Previous","keys":["CTRL","TAB"]},{"input":"ENCODER_CCW","displayName":"Next","keys":["CTRL","SHIFT","TAB"]},{"input":"ENCODER_PRESS","displayName":"Confirm","keys":["ENTER"]}]}"#,
+        )
+        .unwrap();
+        assert_eq!(store.load(), Err(ProfileError::Invalid));
+        let saved = store.save(draft(), None).unwrap();
+        assert_eq!(store.load().unwrap(), Some(saved));
+        assert!(directory.path().join("profile.json.bak").exists());
+    }
+
     #[test]
     fn duplicate_chord_is_rejected() {
         let mut profile = draft();

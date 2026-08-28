@@ -33,7 +33,10 @@ describe("mapping validation", () => {
     expect(INPUT_LABELS.ENCODER_PRESS).toBe("GPIO8 外接确认/动作按钮");
     expect(INPUT_LABELS.BUTTON_A).toBe("GPIO10 下拉按键");
     expect(INPUT_LABELS.BUTTON_B).toBe("GPIO11 下拉按键");
-    expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "ENCODER_PRESS")?.displayName).toBe("确认动作");
+    expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "BUTTON_B")?.displayName).toBe("确认动作");
+    expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "BUTTON_B")?.keys).toEqual(["ENTER"]);
+    expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "BUTTON_A")?.keys).toEqual(["CTRL", "N"]);
+    expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "ENCODER_PRESS")?.keys).toEqual(["CTRL", "SHIFT", "N"]);
     expect(INITIAL_MAPPINGS).toHaveLength(5);
     expect(RUNTIME_STATE_LABELS.STOPPED).toBe("已停止");
     expect(RUNTIME_STATE_LABELS.DRY_RUN).toBe("演练模式");
@@ -82,9 +85,9 @@ describe("mapping validation", () => {
     const saved = await host.saveProfile({ version: 1, revision: null, serial: { port: "fixture", baud: 115200 }, target: { processName: "Fixture.exe", processPath: "C:\\Fixture\\Fixture.exe" }, mappings: [
       { input: "ENCODER_CW", displayName: "上一项", keys: ["CTRL", "TAB"] },
       { input: "ENCODER_CCW", displayName: "下一项", keys: ["CTRL", "SHIFT", "TAB"] },
-      { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] },
-      { input: "BUTTON_A", displayName: "按键 A", keys: ["CTRL", "1"] },
-      { input: "BUTTON_B", displayName: "按键 B", keys: ["CTRL", "2"] }
+      { input: "ENCODER_PRESS", displayName: "新建窗口", keys: ["CTRL", "SHIFT", "N"] },
+      { input: "BUTTON_A", displayName: "新建", keys: ["CTRL", "N"] },
+      { input: "BUTTON_B", displayName: "确认动作", keys: ["ENTER"] }
     ] });
     expect((await host.loadProfile())?.revision).toBe(saved.revision);
     expect((await host.loadProfile())?.serial).toEqual({ port: "fixture", baud: 115200 });

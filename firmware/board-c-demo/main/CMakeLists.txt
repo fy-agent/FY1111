@@ -24,6 +24,9 @@ idf_component_register(
         "display/status_text.c"
         "display/font.c"
         "display/st7789_status.c"
-    INCLUDE_DIRS "." "input" "protocol" "net" "display" "audio" "sensor"
+        "protocol/hid_frame.c"
+        "usb/usb_descriptors.c"
+        "usb/ventured_link.c"
+    INCLUDE_DIRS "." "input" "protocol" "net" "display" "audio" "sensor" "usb"
     REQUIRES driver esp_driver_i2s esp_driver_i2c esp_timer esp_wifi esp_event esp_netif nvs_flash esp_lcd lwip esp_http_client esp-tls mbedtls vl53l0x
 )

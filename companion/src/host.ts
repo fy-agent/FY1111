@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { DeviceSettings, NetworkStatus, ProfileDraft, RuntimeStatus, TargetDraft } from "./types";
-import { DEFAULT_DEVICE_SETTINGS, EMPTY_NETWORK } from "./types";
+import { DEFAULT_DEVICE_SETTINGS, EMPTY_NETWORK, USB_LINK_ID } from "./types";
 import { ssidLooksFiveG } from "./validation";
 
 export interface CompanionHost {
@@ -47,7 +47,7 @@ export function createFixtureHost(): CompanionHost {
   let device = { ...DEFAULT_DEVICE_SETTINGS };
   let network = { ...EMPTY_NETWORK };
   return {
-    listPorts: async () => ["浏览器夹具串口"],
+    listPorts: async () => [USB_LINK_ID],
     captureTarget: async () => ({ processName: "Fixture.exe", processPath: "C:\\Fixture\\Fixture.exe" }),
     loadProfile: async () => saved,
     saveProfile: async (draft) => { saved = { ...draft, revision: "fixture-revision" }; return saved; },

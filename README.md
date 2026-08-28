@@ -64,10 +64,10 @@ of the commands above.
   those peripherals cannot be enabled alongside this wiring without a new pin
   allocation decision.
 
-After selecting the intended serial port and saving the profile, start the
-Companion in dry-run mode. The production dry-run reads that selected port and
-resolves mappings but never constructs an input dispatcher. The browser fixture
-tests the same UI flow with fakes and never opens a real port.
+After Board C is plugged in (Companion shows 已插入) and the profile is saved,
+start dry-run. Production dry-run opens the HID link and resolves mappings but
+never constructs an input dispatcher. The browser fixture tests the same UI
+flow with fakes and never opens a real USB device.
 Two extra press-to-ground buttons use GPIO10 (`BUTTON_A`) and GPIO11
 (`BUTTON_B`) with the same idle-HIGH / pressed-LOW wiring as GPIO8.
 
@@ -78,7 +78,7 @@ this first demo.
 
 ## Scope and future seam
 
-The window contains a serial selection, a collapsed **设置** panel for Wi-Fi
+The window contains a Board C USB inserted/not-inserted status, a collapsed **设置** panel for Wi-Fi
 and the SiliconFlow API key, a captured foreground target, and the five fixed
 physical-input rows. Secrets stay in `device.json`, not the shortcut profile.
 ESP32-S3 station mode is 2.4 GHz only; a 5 GHz SSID is rejected with a visible

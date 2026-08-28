@@ -56,8 +56,9 @@ Companion decoding. They do not prove a live microphone.
 
 ## Hardware checks (after an explicit flash)
 
-1. Flash the current image to the Board C USB-Serial-JTAG port, then start
-   Companion native and open **设置**.
+1. Flash the current image (first time still USB-Serial-JTAG; later ROM
+   download), then start Companion native. It should show **已插入** without
+   choosing a COM port. Open **设置**.
 2. Idle: no `VKEY_REC` lines. Encoder CW/CCW and GPIO8 still emit
    `VKEY_INPUT/1` only.
 3. Hold GPIO9 in a quiet room for about 1 s. Expect `START` → `ACTIVE` →

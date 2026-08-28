@@ -54,87 +54,15 @@ impl std::error::Error for SerialError {}
 
 /// The production source is constructed only after a later user command starts
 /// a runtime. Tests provide EventSource fakes and never open a COM device.
-pub struct SerialPortSource {
-    port: Box<dyn serialport::SerialPort>,
-    buffered: BoundedLineBuffer,
+#[derive(Default)]
+pub(crate) struct LinkDecoder {
     tracker: SequenceTracker,
     net_tracker: SequenceTracker,
     last_network: Option<NetworkStatus>,
 }
 
-impl SerialPortSource {
-    pub fn available_ports() -> Result<Vec<String>, SerialError> {
-        serialport::available_ports()
-            .map(|ports| ports.into_iter().map(|port| port.port_name).collect())
-            .map_err(|_| SerialError::Unavailable)
-    }
-
-    pub fn open(port_name: &str, baud: u32) -> Result<Self, SerialError> {
-        if port_name.trim().is_empty() || baud == 0 {
-            return Err(SerialError::Unavailable);
-        }
-        let port = serialport::new(port_name, baud)
-            .timeout(Duration::from_millis(100))
-            .open()
-            .map_err(|_| SerialError::Unavailable)?;
-        Ok(Self {
-            port,
-            buffered: BoundedLineBuffer::default(),
-            tracker: SequenceTracker::default(),
-            net_tracker: SequenceTracker::default(),
-            last_network: None,
-        })
-    }
-}
-
-impl EventSource for SerialPortSource {
-    fn poll_event(&mut self) -> Result<Option<SerialEvent>, SerialError> {
-        loop {
-            if let Some(line) = self.buffered.push(&[]) {
-                if let Some(event) = self.accept_decoded(&line) {
-                    return Ok(Some(event));
-                }
-                continue;
-            }
-            let mut bytes = [0_u8; 128];
-            match self.port.read(&mut bytes) {
-                Ok(0) => return Ok(None),
-                Ok(count) => {
-                    let Some(line) = self.buffered.push(&bytes[..count]) else {
-                        continue;
-                    };
-                    if let Some(event) = self.accept_decoded(&line) {
-                        return Ok(Some(event));
-                    }
-                }
-                Err(error) if error.kind() == std::io::ErrorKind::TimedOut => return Ok(None),
-                Err(_) => return Err(SerialError::Read),
-            }
-        }
-    }
-
-    fn write_line(&mut self, line: &str) -> Result<(), SerialError> {
-        self.port
-            .write_all(line.as_bytes())
-            .map_err(|_| SerialError::Write)?;
-        if !line.ends_with('\n') {
-            self.port.write_all(b"\n").map_err(|_| SerialError::Write)?;
-        }
-        self.port.flush().map_err(|_| SerialError::Write)
-    }
-
-    fn last_network_status(&self) -> Option<NetworkStatus> {
-        self.last_network.clone()
-    }
-
-    fn close(&mut self) {
-        let _ = self.port.clear(serialport::ClearBuffer::All);
-        self.buffered.clear();
-    }
-}
-
-impl SerialPortSource {
-    fn accept_decoded(&mut self, line: &[u8]) -> Option<SerialEvent> {
+impl LinkDecoder {
+    pub(crate) fn accept_decoded(&mut self, line: &[u8]) -> Option<SerialEvent> {
         match decode_record(line)? {
             DecodedLine::Input(event) => {
                 let outcome = self.tracker.observe(event.sequence);
@@ -211,6 +139,85 @@ impl SerialPortSource {
                 None
             }
         }
+    }
+
+    pub(crate) fn last_network_status(&self) -> Option<NetworkStatus> {
+        self.last_network.clone()
+    }
+}
+
+pub struct SerialPortSource {
+    port: Box<dyn serialport::SerialPort>,
+    buffered: BoundedLineBuffer,
+    decoder: LinkDecoder,
+}
+
+impl SerialPortSource {
+    pub fn available_ports() -> Result<Vec<String>, SerialError> {
+        serialport::available_ports()
+            .map(|ports| ports.into_iter().map(|port| port.port_name).collect())
+            .map_err(|_| SerialError::Unavailable)
+    }
+
+    pub fn open(port_name: &str, baud: u32) -> Result<Self, SerialError> {
+        if port_name.trim().is_empty() || baud == 0 {
+            return Err(SerialError::Unavailable);
+        }
+        let port = serialport::new(port_name, baud)
+            .timeout(Duration::from_millis(100))
+            .open()
+            .map_err(|_| SerialError::Unavailable)?;
+        Ok(Self {
+            port,
+            buffered: BoundedLineBuffer::default(),
+            decoder: LinkDecoder::default(),
+        })
+    }
+}
+
+impl EventSource for SerialPortSource {
+    fn poll_event(&mut self) -> Result<Option<SerialEvent>, SerialError> {
+        loop {
+            if let Some(line) = self.buffered.push(&[]) {
+                if let Some(event) = self.decoder.accept_decoded(&line) {
+                    return Ok(Some(event));
+                }
+                continue;
+            }
+            let mut bytes = [0_u8; 128];
+            match self.port.read(&mut bytes) {
+                Ok(0) => return Ok(None),
+                Ok(count) => {
+                    let Some(line) = self.buffered.push(&bytes[..count]) else {
+                        continue;
+                    };
+                    if let Some(event) = self.decoder.accept_decoded(&line) {
+                        return Ok(Some(event));
+                    }
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::TimedOut => return Ok(None),
+                Err(_) => return Err(SerialError::Read),
+            }
+        }
+    }
+
+    fn write_line(&mut self, line: &str) -> Result<(), SerialError> {
+        self.port
+            .write_all(line.as_bytes())
+            .map_err(|_| SerialError::Write)?;
+        if !line.ends_with('\n') {
+            self.port.write_all(b"\n").map_err(|_| SerialError::Write)?;
+        }
+        self.port.flush().map_err(|_| SerialError::Write)
+    }
+
+    fn last_network_status(&self) -> Option<NetworkStatus> {
+        self.decoder.last_network_status()
+    }
+
+    fn close(&mut self) {
+        let _ = self.port.clear(serialport::ClearBuffer::All);
+        self.buffered.clear();
     }
 }
 

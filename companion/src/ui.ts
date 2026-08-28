@@ -12,9 +12,9 @@ export const INPUT_LABELS = {
 export const INITIAL_MAPPINGS: MappingDraft[] = [
   { input: "ENCODER_CW", displayName: "上一项", keys: ["CTRL", "TAB"] },
   { input: "ENCODER_CCW", displayName: "下一项", keys: ["CTRL", "SHIFT", "TAB"] },
-  { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] },
-  { input: "BUTTON_A", displayName: "按键 A", keys: ["CTRL", "1"] },
-  { input: "BUTTON_B", displayName: "按键 B", keys: ["CTRL", "2"] }
+  { input: "ENCODER_PRESS", displayName: "新建窗口", keys: ["CTRL", "SHIFT", "N"] },
+  { input: "BUTTON_A", displayName: "新建", keys: ["CTRL", "N"] },
+  { input: "BUTTON_B", displayName: "确认动作", keys: ["ENTER"] }
 ];
 
 export const RUNTIME_STATE_LABELS: Record<RuntimeStatus["state"], string> = {

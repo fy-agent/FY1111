@@ -25,6 +25,7 @@ serde = { version = "=1.0.228", features = ["derive"] }
 serde_json = "=1.0.145"
 sha2 = "=0.10.9"
 serialport = "=4.8.1"
+hidapi = "=2.6.3"
 tauri = { version = "=2.11.5", features = [] }
 windows-sys = { version = "=0.61.2", features = [
     "Win32_Foundation",

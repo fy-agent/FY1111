@@ -13,6 +13,7 @@
 #include "board_c_pins.h"
 #include "ec11_core.h"
 #include "input_event.h"
+#include "usb/ventured_link.h"
 
 static const char *const TAG = "board_c_encoder";
 #define SCAN_PERIOD_MS 10U
@@ -45,8 +46,7 @@ static void IRAM_ATTR encoder_isr(void *unused) {
 static void emit(ventured_input_t event) {
     char record[80];
     if (!ventured_format_input_event(record, sizeof(record), ++s_sequence, event)) return;
-    fputs(record, stdout);
-    fflush(stdout);
+    ventured_link_write(record);
 }
 
 static void encoder_worker(void *unused) {

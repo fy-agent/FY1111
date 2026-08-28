@@ -15,12 +15,14 @@
     - ../main/display
     - ../main/audio
     - ../main/sensor
+    - ../main/usb
 :files:
   :source:
     - ../main/audio/pcm_metrics.c
     - ../main/audio/wav_pcm.c
     - ../main/audio/rec_gate.c
     - ../main/sensor/tof_hand_gesture.c
+    - ../main/protocol/hid_frame.c
 :plugins:
   :enabled:
     - module_generator

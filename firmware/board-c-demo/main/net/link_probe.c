@@ -16,6 +16,7 @@
 #include "asr_upload.h"
 #include "protocol/link_debug.h"
 #include "status_out.h"
+#include "usb/ventured_link.h"
 #include "wifi_sta.h"
 
 static const char *TAG = "board_c_link";
@@ -37,8 +38,7 @@ typedef struct {
 
 static void emit_line(const char *line) {
     if (line == NULL || line[0] == '\0') return;
-    fputs(line, stdout);
-    fflush(stdout);
+    ventured_link_write(line);
 }
 
 void ventured_link_logf(const char *fmt, ...) {

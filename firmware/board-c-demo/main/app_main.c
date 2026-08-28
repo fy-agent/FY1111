@@ -12,20 +12,20 @@
 #include "net/status_out.h"
 #include "net/wifi_sta.h"
 #include "protocol/net_event.h"
+#include "usb/ventured_link.h"
 
 static const char *TAG = "board_c_demo";
 
 static void on_net(const ventured_net_status_t *status) {
     char record[256];
     if (ventured_format_net_event(record, sizeof(record), status)) {
-        fputs(record, stdout);
-        fflush(stdout);
+        ventured_link_write(record);
     }
     ventured_display_show_net(status);
 }
 
 void app_main(void) {
-    setvbuf(stdout, NULL, _IONBF, 0);
+    ESP_ERROR_CHECK(ventured_link_start());
     ventured_wifi_set_listener(NULL);
     if (ventured_display_start() != ESP_OK) {
         ESP_LOGW(TAG, "status display unavailable; wifi continues");

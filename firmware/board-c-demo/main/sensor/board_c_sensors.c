@@ -15,6 +15,7 @@
 #include "net/asr_upload.h"
 #include "sensor_event.h"
 #include "tof_hand_gesture.h"
+#include "usb/ventured_link.h"
 
 #define VL53L0X_ADDR 0x29
 #define SENSOR_LOOP_MS 50U
@@ -31,8 +32,7 @@ static uint32_t s_sequence;
 static void emit_sensor(const ventured_sensor_status_t *status) {
     char record[128];
     if (!ventured_format_sensor_event(record, sizeof(record), status)) return;
-    fputs(record, stdout);
-    fflush(stdout);
+    ventured_link_write(record);
 }
 
 static bool pir_motion(void) {

@@ -1,9 +1,13 @@
 # VentureD device link protocol v1
 
-Host-to-device configuration and device-to-host network status share the USB
-Serial-JTAG console with `VKEY_INPUT/1`. Each kind has its own prefix. Records
-with an unknown prefix, unknown field, invalid JSON/UTF-8, or more than 1024
-bytes are ignored.
+Host-to-device configuration and device-to-host network status share the Board C
+HID + Vendor USB link with `VKEY_INPUT/1`. Companion auto-opens VID `0x303A` /
+PID `0x82D0` (product `VentureD Board C`) and does not use a COM port. HID
+carries Teensy-style 64-byte RawHID frames: `report[0]` is length 1–63,
+`report[1..]` is payload. Host hidapi writes may prepend report-id `0`. Vendor
+WinUSB is the same newline stream for later raw USB clients. Each kind has its
+own prefix. Records with an unknown prefix, unknown field, invalid JSON/UTF-8,
+or more than 1024 bytes are ignored.
 
 ## Host → device: `VKEY_CONFIG/1`
 

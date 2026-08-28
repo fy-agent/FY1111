@@ -15,7 +15,7 @@ The immediate demo is a compact physical shortcut controller:
 
 ```text
 Board C rotary input
-  -> versioned USB serial event
+  -> versioned HID + Vendor USB event
   -> compact Windows Companion
   -> locally configured shortcut mapping
   -> foreground-application guard
@@ -33,13 +33,14 @@ insertion is still a later extension.
 ### Current implementation repository
 
 - Path: `C:\Users\xk\Desktop\VentureD`
-- Branch: `master`
+- Branch: `main`
 - Archived Trellis tasks:
   `.trellis/tasks/archive/2026-08/08-27-vibekey-hardware-hackathon-demo`
   `.trellis/tasks/archive/2026-08/08-27-wifi-oled-settings`
   `.trellis/tasks/archive/2026-08/08-28-board-c-gesture-asr-companion`
+  `.trellis/tasks/archive/2026-08/08-28-board-c-hid-vendor-usb`
 - Task status: `completed`
-- Demo source is committed on `master`. Generated IDF, Cargo, and Companion
+- Demo source is committed on `main`. Generated IDF, Cargo, and Companion
   outputs stay gitignored. Inspect `git status` before editing and do not
   overwrite unrelated work. The remaining active Trellis task is
   `00-bootstrap-guidelines`.
@@ -240,17 +241,17 @@ The canonical protocol description is `protocol/input-event-v1.md`.
 
 The Companion is under `companion` and uses:
 
-- Tauri 2 and Rust for serial access, profile persistence, target probing,
+- Tauri 2 and Rust for HID USB link access, profile persistence, target probing,
   runtime state, and guarded Windows input.
 - React, Vite, and TypeScript for the one-window UI.
 - A single typed `CompanionHost` boundary between UI and native commands.
 
-The profile contains version, revision, selected serial port and baud, exact
+The profile contains version, revision, USB link id `usb:ventured` and baud, exact
 foreground process identity, and the three mappings. The native host is the
 schema authority and rejects unknown fields, stale revisions, invalid names,
 invalid chords, duplicate inputs, and duplicate canonical chords.
 
-Dry-run opens and parses the selected production serial source but must not
+Dry-run opens and parses the production HID USB source but must not
 construct an input dispatcher. Live mode requires explicit per-process
 enablement, an exact foreground process match, and clean supported modifier
 state. Stop or serial-error shutdown clears live permission.

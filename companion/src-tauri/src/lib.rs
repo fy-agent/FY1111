@@ -7,6 +7,7 @@ pub mod profile;
 pub mod runtime;
 pub mod serial;
 pub mod target;
+pub mod usb_link;
 pub mod windows_foreground_restore;
 
 use serde::{Deserialize, Serialize};
@@ -20,7 +21,7 @@ pub mod commands {
         RuntimeController, RuntimeError, RuntimeMode, RuntimeStatus, WindowsInputDispatcher,
         WindowsModifierState,
     };
-    use crate::serial::SerialPortSource;
+    use crate::usb_link::{UsbLinkSource, USB_LINK_BAUD, USB_LINK_ID};
     use crate::target::{ForegroundProbe, WindowsForegroundProbe};
     use crate::windows_foreground_restore::WindowsForegroundTargetRestorer;
     use tauri::Manager;
@@ -60,40 +61,31 @@ pub mod commands {
         Ok(DeviceSettingsStore::new(directory.join("device.json")))
     }
 
-    fn ensure_device_source(
-        runtime: &mut RuntimeController,
-        port: &str,
-        baud: u32,
-    ) -> Result<(), String> {
-        if runtime.source_matches(port, baud) {
+    fn normalize_link(draft: &mut ProfileDraft) {
+        draft.serial.port = USB_LINK_ID.to_owned();
+        if draft.serial.baud == 0 {
+            draft.serial.baud = USB_LINK_BAUD;
+        }
+    }
+
+    fn attach_usb(runtime: &mut RuntimeController) -> Result<(), String> {
+        if runtime.source_matches(USB_LINK_ID, USB_LINK_BAUD) {
             return Ok(());
         }
         runtime
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
         runtime.close_source();
-        let source = SerialPortSource::open(port, baud)
-            .map_err(|_| "selected serial port could not be opened".to_owned())?;
-        runtime.attach_source(port.to_owned(), baud, Box::new(source));
+        let source = UsbLinkSource::open().map_err(|_| "未插入 Board C USB 设备".to_owned())?;
+        runtime.attach_source(USB_LINK_ID.to_owned(), USB_LINK_BAUD, Box::new(source));
         Ok(())
     }
 
     fn start_shortcut(
         runtime: &mut RuntimeController,
-        port: &str,
-        baud: u32,
         mode: RuntimeMode,
     ) -> Result<RuntimeStatus, String> {
-        if runtime.source_matches(port, baud) {
-            return runtime.start_existing(mode).map_err(|error| error.to_string());
-        }
-        runtime
-            .ensure_stopped()
-            .map_err(|error| error.to_string())?;
-        runtime.close_source();
-        let source = SerialPortSource::open(port, baud)
-            .map_err(|_| "selected serial port could not be opened".to_owned())?;
-        runtime.attach_source(port.to_owned(), baud, Box::new(source));
+        attach_usb(runtime)?;
         runtime.start_existing(mode).map_err(|error| error.to_string())
     }
 
@@ -129,7 +121,11 @@ pub mod commands {
 
     #[tauri::command]
     pub fn list_ports() -> Result<Vec<String>, String> {
-        SerialPortSource::available_ports().map_err(|_| "serial ports are unavailable".to_owned())
+        Ok(if UsbLinkSource::present() {
+            vec![USB_LINK_ID.to_owned()]
+        } else {
+            Vec::new()
+        })
     }
 
     #[tauri::command]
@@ -168,12 +164,14 @@ pub mod commands {
         runtime
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
-        if let Some(saved) = profile.as_ref() {
+        if let Some(mut saved) = profile {
+            normalize_link(&mut saved);
             runtime
                 .set_profile(saved.clone())
                 .map_err(|_| "saved profile is invalid".to_owned())?;
+            return Ok(Some(saved));
         }
-        Ok(profile)
+        Ok(None)
     }
 
     #[tauri::command]
@@ -186,6 +184,8 @@ pub mod commands {
         runtime
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
+        let mut draft = draft;
+        normalize_link(&mut draft);
         let saved = save_profile_to_store(&profile_store(&app)?, draft)?;
         runtime
             .set_profile(saved.clone())
@@ -203,8 +203,8 @@ pub mod commands {
         runtime
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
-        let profile = load_profile_into_runtime(&store, &mut runtime)?;
-        start_shortcut(&mut runtime, &profile.serial.port, profile.serial.baud, RuntimeMode::DryRun)
+        let _profile = load_profile_into_runtime(&store, &mut runtime)?;
+        start_shortcut(&mut runtime, RuntimeMode::DryRun)
     }
 
     #[tauri::command]
@@ -217,8 +217,8 @@ pub mod commands {
         runtime
             .ensure_stopped()
             .map_err(|error| error.to_string())?;
-        let profile = load_profile_into_runtime(&store, &mut runtime)?;
-        start_shortcut(&mut runtime, &profile.serial.port, profile.serial.baud, RuntimeMode::Live)
+        let _profile = load_profile_into_runtime(&store, &mut runtime)?;
+        start_shortcut(&mut runtime, RuntimeMode::Live)
     }
 
     #[tauri::command]
@@ -278,9 +278,7 @@ pub mod commands {
         state: tauri::State<'_, AppState>,
         request: ApplyDeviceConfigRequest,
     ) -> Result<NetworkStatus, String> {
-        if request.port.trim().is_empty() || request.baud == 0 {
-            return Err("a serial port is required".to_owned());
-        }
+        let _ = (request.port.as_str(), request.baud);
         request
             .settings
             .validate()
@@ -289,7 +287,7 @@ pub mod commands {
             .save(request.settings)
             .map_err(|error| error.to_string())?;
         let mut runtime = state.runtime()?;
-        ensure_device_source(&mut runtime, &request.port, request.baud)?;
+        attach_usb(&mut runtime)?;
         runtime
             .apply_config(&saved)
             .map_err(|error| error.to_string())
@@ -299,7 +297,11 @@ pub mod commands {
     pub fn poll_network_status(
         state: tauri::State<'_, AppState>,
     ) -> Result<NetworkStatus, String> {
-        Ok(state.runtime()?.poll_network())
+        let mut runtime = state.runtime()?;
+        if !runtime.has_source() {
+            let _ = attach_usb(&mut runtime);
+        }
+        Ok(runtime.poll_network())
     }
 
     pub fn target_from_draft(draft: TargetDraft) -> Result<ProfileTarget, String> {
@@ -344,18 +346,18 @@ pub mod commands {
                     },
                     MappingDraft {
                         input: InputId::EncoderPress,
-                        display_name: "Confirm".into(),
-                        keys: vec!["ENTER".into()],
+                        display_name: "New window".into(),
+                        keys: vec!["CTRL".into(), "SHIFT".into(), "N".into()],
                     },
                     MappingDraft {
                         input: InputId::ButtonA,
-                        display_name: "Key A".into(),
-                        keys: vec!["CTRL".into(), "1".into()],
+                        display_name: "New".into(),
+                        keys: vec!["CTRL".into(), "N".into()],
                     },
                     MappingDraft {
                         input: InputId::ButtonB,
-                        display_name: "Key B".into(),
-                        keys: vec!["CTRL".into(), "2".into()],
+                        display_name: "Confirm".into(),
+                        keys: vec!["ENTER".into()],
                     },
                 ],
             }

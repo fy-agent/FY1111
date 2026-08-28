@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CompanionHost } from "./host";
 import { type DeviceSettings, type MappingDraft, type ProfileDraft, type RuntimeStatus } from "./types";
-import { DEFAULT_DEVICE_SETTINGS, EMPTY_NETWORK } from "./types";
+import { DEFAULT_DEVICE_SETTINGS, EMPTY_NETWORK, USB_LINK_BAUD, USB_LINK_ID } from "./types";
 import { ChordField } from "./ChordField";
 import { SettingsPanel } from "./SettingsPanel";
 import { TranscriptPanel } from "./TranscriptPanel";
@@ -10,12 +10,12 @@ import { canonicalChord, deviceSettingsError, mappingErrors, ssidLooksFiveG } fr
 import "./app.css";
 
 export function App({ host }: { host: CompanionHost }) {
-  const [ports, setPorts] = useState<string[]>([]);
-  const [draft, setDraft] = useState<ProfileDraft>({ version: 1, revision: null, serial: { port: "", baud: 115200 }, target: null, mappings: INITIAL_MAPPINGS });
+  const [usbPresent, setUsbPresent] = useState(false);
+  const [draft, setDraft] = useState<ProfileDraft>({ version: 1, revision: null, serial: { port: USB_LINK_ID, baud: USB_LINK_BAUD }, target: null, mappings: INITIAL_MAPPINGS });
   const [runtime, setRuntime] = useState<RuntimeStatus>({ state: "STOPPED", liveEnabled: false, lastEvent: "尚无事件。", gapMissed: null, network: EMPTY_NETWORK });
   const [device, setDevice] = useState<DeviceSettings>(DEFAULT_DEVICE_SETTINGS);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [notice, setNotice] = useState("尚未连接。请先选择设备串口。");
+  const [notice, setNotice] = useState("插入 Board C 即可连接，无需选择串口。");
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -23,20 +23,16 @@ export function App({ host }: { host: CompanionHost }) {
   const deviceError = useMemo(() => deviceSettingsError(device), [device]);
   const stopped = runtime.state === "STOPPED";
   const editable = hydrated && stopped && !busy;
-  const canSave = editable && errors.size === 0 && Boolean(draft.serial.port.trim()) && draft.target !== null;
+  const canSave = editable && errors.size === 0 && draft.target !== null;
   const canStart = canSave && !dirty && draft.revision !== null;
-  const canApply = hydrated && !busy && Boolean(draft.serial.port.trim()) && deviceError === null;
-  const visiblePorts = useMemo(
-    () => draft.serial.port && !ports.includes(draft.serial.port) ? [draft.serial.port, ...ports] : ports,
-    [draft.serial.port, ports]
-  );
+  const canApply = hydrated && !busy && usbPresent && deviceError === null;
 
   useEffect(() => {
     let cancelled = false;
     void host.loadProfile()
       .then((profile) => {
         if (!cancelled && profile) {
-          setDraft(profile);
+          setDraft({ ...profile, serial: { port: USB_LINK_ID, baud: USB_LINK_BAUD } });
           setDirty(false);
           setNotice("已恢复保存的配置；实时权限保持关闭。");
         }
@@ -47,6 +43,9 @@ export function App({ host }: { host: CompanionHost }) {
       .finally(() => {
         if (!cancelled) setHydrated(true);
       });
+    void host.listPorts()
+      .then((ports) => { if (!cancelled) setUsbPresent(ports.includes(USB_LINK_ID) || ports.length > 0); })
+      .catch(() => { if (!cancelled) setUsbPresent(false); });
     void host.loadDeviceSettings()
       .then((settings) => { if (!cancelled) setDevice(settings); })
       .catch(() => { if (!cancelled) setNotice("已保存的联网设置不可用，正在使用空白草稿。"); });
@@ -91,8 +90,11 @@ export function App({ host }: { host: CompanionHost }) {
     let cancelled = false;
     const poll = async (): Promise<void> => {
       try {
-        const network = await host.pollNetworkStatus();
-        if (!cancelled) setRuntime((current) => ({ ...current, network }));
+        const [network, ports] = await Promise.all([host.pollNetworkStatus(), host.listPorts()]);
+        if (!cancelled) {
+          setRuntime((current) => ({ ...current, network }));
+          setUsbPresent(ports.includes(USB_LINK_ID) || ports.length > 0);
+        }
       } catch {
         if (!cancelled) setNotice("网络状态轮询失败。");
       }
@@ -113,18 +115,6 @@ export function App({ host }: { host: CompanionHost }) {
     return () => window.clearTimeout(timer);
   }, [runtime.network.state, runtime.network.ssid]);
 
-  async function refresh(): Promise<void> {
-    if (!editable) return;
-    setBusy(true);
-    try {
-      setPorts(await host.listPorts());
-      setNotice("已刷新串口列表，未打开任何串口。");
-    } catch {
-      setNotice("刷新串口列表失败，未打开任何串口。");
-    } finally {
-      setBusy(false);
-    }
-  }
   async function capture(): Promise<void> {
     if (!editable) return;
     setBusy(true);
@@ -147,8 +137,15 @@ export function App({ host }: { host: CompanionHost }) {
       setDraft(await host.saveProfile(draft));
       setDirty(false);
       setNotice("配置已保存并生成新修订版本。");
-    } catch {
-      setNotice("保存配置失败；解决过期修订版本前请重新加载。");
+    } catch (error) {
+      const text = typeof error === "string" ? error : error instanceof Error ? error.message : "";
+      if (text.includes("stale")) {
+        setNotice("保存配置失败；解决过期修订版本前请重新加载。");
+      } else if (text.includes("duplicate")) {
+        setNotice("保存配置失败；快捷键与另一行重复。");
+      } else {
+        setNotice("保存配置失败。若仍是旧的三行配置，捕获目标后请再保存一次。");
+      }
     } finally {
       setBusy(false);
     }
@@ -220,7 +217,7 @@ export function App({ host }: { host: CompanionHost }) {
 
   return <main className="window">
     <header><div><h1>VentureD Companion</h1><p>Board C 快捷键演示：捕获一次前台，旋钮或 GPIO8 将其唤回后再发送映射快捷键</p></div><span className={`state ${runtime.state.toLowerCase()}`}>{RUNTIME_STATE_LABELS[runtime.state]}</span></header>
-    <section className="device" aria-label="设备串口"><label>设备串口<select disabled={!editable} value={draft.serial.port} onChange={(event) => { setDraft((current) => ({ ...current, serial: { ...current.serial, port: event.target.value } })); setDirty(true); }}><option value="">请选择串口</option>{visiblePorts.map((port) => <option key={port}>{port}</option>)}</select></label><button disabled={!editable} onClick={() => void refresh()}>刷新</button><span>波特率 {draft.serial.baud}</span></section>
+    <section className="device" aria-label="设备连接"><div><strong>Board C USB</strong><p>插入即可连接，无需选择串口</p></div><span className={`usb-status ${usbPresent ? "present" : "absent"}`}>{usbPresent ? "已插入" : "未插入"}</span></section>
     <SettingsPanel settings={device} network={runtime.network} open={settingsOpen} busy={busy} canApply={canApply} error={settingsOpen ? deviceError : null} onToggle={() => setSettingsOpen((current) => !current)} onChange={(patch) => setDevice((current) => ({ ...current, ...patch }))} onApply={() => void applyNetwork()} />
     <TranscriptPanel asrState={runtime.network.asrState} asrText={runtime.network.asrText} asrReason={runtime.network.asrReason} recState={runtime.network.recState} />
     <section className="target" aria-label="前台目标"><div><strong>前台目标</strong><p>{draft.target ? `${draft.target.processName} · ${draft.target.processPath}` : "尚未捕获。请先切到目标应用，再点 3 秒后捕获。"}</p></div><button disabled={!editable} onClick={() => void capture()}>3 秒后捕获</button></section>

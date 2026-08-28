@@ -42,8 +42,8 @@ IDF 5.5.4.
 
 Use ESP-IDF 5.5.4. The adapter configures GPIO6/GPIO7 for rotary samples without enabling
 GPIO8 interrupts, queues ISR samples, scans the independent GPIO8 button on a
-10 ms cadence, emits only semantic `VKEY_INPUT/1` records on the ESP32-S3
-USB-Serial-JTAG console, and owns no shortcut mapping.
+10 ms cadence, emits only semantic `VKEY_INPUT/1` records on the TinyUSB
+HID + Vendor link (VID `0x303A`, PID `0x82D0`), and owns no shortcut mapping.
 Hold GPIO9 to capture I2S PCM until release, or until the PCM keep buffer
 fills (about a few minutes when 8MB PSRAM is present), but only while the
 station is `CONNECTED`. The firmware emits
@@ -57,9 +57,9 @@ in `device.json`, not in the shortcut profile. ESP32-S3 station mode is
 staying on `CONNECTING`.
 
 The saved Companion profile contract is versioned and nested: `{"version":1,
-"revision":"sha256:...","serial":{"port":"<selected port>","baud":115200},
-"target":...,"mappings":[...]}`. Flat `serialPort`/`baud` fields and unknown
-profile fields are rejected.
+"revision":"sha256:...","serial":{"port":"usb:ventured","baud":115200},
+"target":...,"mappings":[...]}`. `serial.port` is a link id, not a COM name.
+Flat `serialPort`/`baud` fields and unknown profile fields are rejected.
 
 `idf.py ... build` is offline build evidence. Do not combine it with `flash`,
 `erase-flash`, or `monitor`. Those operations require a new explicit approval
@@ -67,7 +67,7 @@ for the actual board, candidate image, port, write region, reset, and monitor.
 
 ## Companion setup
 
-Choose a port from the host list, capture the intended foreground program after
+Plug in Board C; Companion shows 已插入 and opens the HID link. Capture the intended foreground program after
 the visible three-second delay, configure the five fixed mapping rows, and
 save. The Chinese UI labels `ENCODER_PRESS` as the independent **GPIO8
 external confirm/action button**, and adds GPIO10/GPIO11 as **下拉按键**.
@@ -89,13 +89,16 @@ they do not build native/firmware programs or perform real I/O.
 
 Native Integration is explicitly later and uses Tauri commands only after that
 decision; it still does not itself authorize app-config writes, foreground
-capture, COM access, or `SendInput`. Hardware Acceptance is a separately
+capture, COM access, USB HID, or `SendInput`. Hardware Acceptance is a separately
 authorized ESP-IDF build/flash/monitor/HIL stage. See the repository README
 for the exact three-stage commands and authorization boundaries.
+The first TinyUSB image can still flash over the current USB-Serial-JTAG COM
+port. After that image runs, the app COM port is gone; later flashes use ROM
+download mode (BOOT + RESET).
 
 ## Evidence boundary
 
 Host/Cargo/React/browser checks prove parsing, validation, persistence against
-temporary files, layout, and dry-run behaviour only. They do not prove a COM
-port, physical encoder, flash, foreground capture, `SendInput`, native
-shortcut effect, or any future microphone/Agent workflow.
+temporary files, layout, and dry-run behaviour only. They do not prove a USB HID device, physical encoder, flash, foreground
+capture, `SendInput`, native shortcut effect, or any future microphone/Agent
+workflow.

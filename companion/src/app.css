@@ -7,7 +7,7 @@ header, .device, .target, .controls { display: flex; gap: 12px; align-items: cen
 header { justify-content: space-between; border-bottom: 1px solid #e6eaf0; padding-bottom: 16px; }
 h1 { margin: 0; font-size: 1.35rem; } p { margin: 4px 0 0; color: #5d687a; overflow-wrap: anywhere; }
 .state { border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: .8rem; background: #e9edf4; }.state.dry-run { background: #fff1c7; color: #765500; }.state.live { background: #ffe0e7; color: #a02b4d; }
-.device, .target { margin-top: 18px; }.device label { display: grid; gap: 4px; flex: 1; }.device select { width: 100%; }.target { justify-content: space-between; padding: 14px; background: #f7f9fc; border-radius: 10px; }.target p { max-width: 440px; }
+.device, .target { margin-top: 18px; justify-content: space-between; }.device { padding: 14px; background: #f7f9fc; border-radius: 10px; }.usb-status { border-radius: 999px; padding: 6px 10px; font-weight: 700; font-size: .8rem; background: #e9edf4; }.usb-status.present { background: #d9f6e3; color: #0f6b38; }.usb-status.absent { background: #ffe0e7; color: #a02b4d; }.target { padding: 14px; background: #f7f9fc; border-radius: 10px; }.target p { max-width: 440px; }
 .settings { margin-top: 16px; border: 1px solid #e1e7f0; border-radius: 12px; background: #f8fafc; }
 .settings-toggle { width: 100%; display: flex; justify-content: space-between; align-items: center; border: 0; background: transparent; padding: 12px 14px; }
 .settings-toggle strong { font-size: .95rem; }

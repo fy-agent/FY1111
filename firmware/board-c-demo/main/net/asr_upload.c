@@ -15,6 +15,7 @@
 #include "display/st7789_status.h"
 #include "protocol/asr_event.h"
 #include "protocol/config_record.h"
+#include "usb/ventured_link.h"
 #include "wifi_sta.h"
 
 static const char *TAG = "board_c_asr";
@@ -38,8 +39,7 @@ static volatile bool s_cancel;
 static void emit_asr(const ventured_asr_status_t *status) {
     char record[1024];
     if (!ventured_format_asr_event(record, sizeof(record), status)) return;
-    fputs(record, stdout);
-    fflush(stdout);
+    ventured_link_write(record);
 }
 
 static void publish(ventured_asr_state_t state, const char *text, const char *reason) {
