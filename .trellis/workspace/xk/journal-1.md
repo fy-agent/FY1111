@@ -42,3 +42,40 @@ Finished and archived the Board C hardware-hackathon demo task, kept generated I
 
 - Do competition HIL for encoder and GPIO8 restore plus live SendInput only with fresh authorization.
 - Do not archive 00-bootstrap-guidelines until that first-time setup task is actually finished.
+
+
+## Session 2: Archive wifi-oled-settings and commit Board C ASR
+
+**Date**: 2026-08-28
+**Task**: Archive wifi-oled-settings and commit Board C ASR
+**Branch**: `master`
+
+### Summary
+
+Finished GPIO9 hold-to-talk, XingChen ASR upload, longer PSRAM capture, archived 08-27-wifi-oled-settings, and committed locally on master.
+
+### Main Changes
+
+- Added on-device SiliconFlow WAV upload and VKEY_ASR display
+- Enabled octal 8MB PSRAM so GPIO9 records until release or buffer full
+- Archived 08-27-wifi-oled-settings; left 00-bootstrap-guidelines active
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `5168bcf` | (see git log) |
+
+### Testing
+
+- [OK] Firmware flashed to COM9 with Embedded PSRAM 8MB
+- [OK] Companion software checks and firmware host tests passed earlier in the session
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Do not archive 00-bootstrap-guidelines
+- Focused-window insertion of ASR text is still out of scope
