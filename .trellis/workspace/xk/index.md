@@ -8,7 +8,7 @@
 
 <!-- @@@auto:current-status -->
 - **Active File**: `journal-1.md`
-- **Total Sessions**: 2
+- **Total Sessions**: 3
 - **Last Active**: 2026-08-28
 <!-- @@@/auto:current-status -->
 
@@ -19,7 +19,7 @@
 <!-- @@@auto:active-documents -->
 | File | Lines | Status |
 |------|-------|--------|
-| `journal-1.md` | ~81 | Active |
+| `journal-1.md` | ~118 | Active |
 <!-- @@@/auto:active-documents -->
 
 ---
@@ -29,6 +29,7 @@
 <!-- @@@auto:session-history -->
 | # | Date | Title | Commits | Branch |
 |---|------|-------|---------|--------|
+| 3 | 2026-08-28 | Archive gesture ASR companion and push Board C voice path | `c9d6d6f` | `main` |
 | 2 | 2026-08-28 | Archive wifi-oled-settings and commit Board C ASR | `5168bcf` | `master` |
 | 1 | 2026-08-27 | Archive Board C demo and ignore generated outputs | `a78b2e4`, `e8ae048` | `master` |
 <!-- @@@/auto:session-history -->

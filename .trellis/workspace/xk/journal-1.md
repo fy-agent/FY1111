@@ -79,3 +79,40 @@ Finished GPIO9 hold-to-talk, XingChen ASR upload, longer PSRAM capture, archived
 
 - Do not archive 00-bootstrap-guidelines
 - Focused-window insertion of ASR text is still out of scope
+
+
+## Session 3: Archive gesture ASR companion and push Board C voice path
+
+**Date**: 2026-08-28
+**Task**: Archive gesture ASR companion and push Board C voice path
+**Branch**: `main`
+
+### Summary
+
+Committed hand-gesture ASR, Companion transcript, and 可录音 ready state; archived 08-28-board-c-gesture-asr-companion.
+
+### Main Changes
+
+- Far-near ToF record control, rec gate, Wi-Fi gate, ASR cancel, Companion transcript card
+- LCD/Companion ready title is 可录音; recording is 录音中
+- Archived 08-28-board-c-gesture-asr-companion; left 00-bootstrap-guidelines active
+
+### Git Commits
+
+| Hash | Message |
+|------|---------|
+| `c9d6d6f` | (see git log) |
+
+### Testing
+
+- [OK] pnpm --dir companion check:software
+- [OK] Flashed build-usbjtag to COM9
+
+### Status
+
+[OK] **Completed**
+
+### Next Steps
+
+- Do not archive 00-bootstrap-guidelines
+- Focused-window insertion of ASR text is still out of scope
