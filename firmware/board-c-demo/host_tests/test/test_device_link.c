@@ -70,6 +70,15 @@ void test_net_event_formatter_is_exact_and_omits_secrets(void) {
         record);
     TEST_ASSERT_EQUAL_STRING("已连接", ventured_net_state_zh(VENTURED_NET_CONNECTED));
     TEST_ASSERT_EQUAL_STRING("未连接", ventured_net_state_zh(VENTURED_NET_DISCONNECTED));
+    TEST_ASSERT_EQUAL_STRING("失败", ventured_net_state_zh(VENTURED_NET_FAILED));
+    TEST_ASSERT_EQUAL_STRING("连接失败", ventured_net_hero_zh(VENTURED_NET_FAILED));
+    TEST_ASSERT_EQUAL_STRING("未连接", ventured_net_hero_zh(VENTURED_NET_DISCONNECTED));
+    TEST_ASSERT_TRUE(ventured_lcd_net_should_redraw(VENTURED_NET_CONNECTED, "", VENTURED_NET_CONNECTING, ""));
+    TEST_ASSERT_TRUE(ventured_lcd_net_should_redraw(VENTURED_NET_CONNECTED, "", VENTURED_NET_FAILED, "TIMEOUT"));
+    TEST_ASSERT_TRUE(ventured_lcd_net_should_redraw(VENTURED_NET_DISCONNECTED, "", VENTURED_NET_FAILED, "NO_AP"));
+    TEST_ASSERT_TRUE(ventured_lcd_net_should_redraw(VENTURED_NET_FAILED, "NO_AP", VENTURED_NET_FAILED, "AUTH"));
+    TEST_ASSERT_FALSE(ventured_lcd_net_should_redraw(VENTURED_NET_FAILED, "AUTH", VENTURED_NET_FAILED, "AUTH"));
+    TEST_ASSERT_FALSE(ventured_lcd_net_should_redraw(VENTURED_NET_CONNECTING, "", VENTURED_NET_CONNECTING, ""));
     TEST_ASSERT_NULL(strstr(record, "apiKey"));
     TEST_ASSERT_NULL(strstr(record, "password"));
     TEST_ASSERT_NULL(strstr(record, "reason"));

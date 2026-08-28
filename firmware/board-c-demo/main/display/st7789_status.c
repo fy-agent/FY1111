@@ -436,6 +436,10 @@ static void draw_footer(void) {
         draw_ascii_centered(FOOTER_Y + 18, s_net.ip, COLOR_MUTED, 2);
         return;
     }
+    if (s_ui == UI_STATE_OFFLINE && s_net.reason[0] != '\0') {
+        draw_ascii_centered(FOOTER_Y + 20, s_net.reason, COLOR_BAD, 2);
+        return;
+    }
     if (s_ui == UI_STATE_ERROR) {
         const char *reason = s_has_asr && s_asr.reason[0] != '\0' ? s_asr.reason : s_rec.reason;
         if (reason[0] != '\0') {
@@ -462,7 +466,7 @@ static const char *hero_title(void) {
             return "连接中";
         case UI_STATE_OFFLINE:
         default:
-            return ventured_net_state_zh(s_net.state);
+            return ventured_net_hero_zh(s_net.state);
     }
 }
 
@@ -478,6 +482,8 @@ static uint16_t hero_title_color(void) {
             return COLOR_OK;
         case UI_STATE_ERROR:
             return COLOR_BAD;
+        case UI_STATE_OFFLINE:
+            return s_net.state == VENTURED_NET_FAILED ? COLOR_BAD : COLOR_MUTED;
         default:
             return COLOR_MUTED;
     }
@@ -504,7 +510,11 @@ static void draw_hero(void) {
             draw_cross_icon();
             break;
         default:
-            draw_mic_icon(COLOR_MUTED);
+            if (s_net.state == VENTURED_NET_FAILED) {
+                draw_cross_icon();
+            } else {
+                draw_mic_icon(COLOR_MUTED);
+            }
             break;
     }
     draw_text_centered(TITLE_Y, hero_title(), hero_title_color());
@@ -611,32 +621,43 @@ esp_err_t ventured_display_start(void) {
     s_ready = true;
     s_ui = UI_STATE_OFFLINE;
     s_bars = 0xFF;
-    ventured_net_status_t initial = {0};
-    ventured_display_show_net(&initial);
+    memset(&s_net, 0, sizeof(s_net));
+    redraw_full();
     ESP_LOGI(TAG, "status display ready");
     return ESP_OK;
+}
+
+static void paint_net_home(ui_state_t next) {
+    set_ui_state(next);
+    s_has_rec = false;
+    s_has_asr = false;
+    s_bars = 0xFF;
+    redraw_full();
 }
 
 void ventured_display_show_net(const ventured_net_status_t *status) {
     if (!s_ready || status == NULL) return;
     lock_display();
+    ventured_net_state_t prev_state = s_net.state;
+    char prev_reason[sizeof(s_net.reason)];
+    memcpy(prev_reason, s_net.reason, sizeof(prev_reason));
+    prev_reason[sizeof(prev_reason) - 1] = '\0';
     s_net = *status;
-    if (ui_holds_scene(s_ui)) {
+    ui_state_t next = ui_from_net();
+    bool net_down = status->state != VENTURED_NET_CONNECTED;
+    bool net_changed = ventured_lcd_net_should_redraw(prev_state, prev_reason, status->state, status->reason);
+    if (net_down && (ui_holds_scene(s_ui) || net_changed || s_ui != next)) {
+        paint_net_home(next);
+    } else if (ui_holds_scene(s_ui)) {
         draw_header();
+    } else if (next != s_ui) {
+        paint_net_home(next);
     } else {
-        ui_state_t next = ui_from_net();
-        if (next != s_ui) {
-            set_ui_state(next);
-            s_has_rec = false;
-            s_has_asr = false;
-            redraw_full();
-        } else {
-            draw_header();
-            if (s_ui == UI_STATE_READY) {
-                fill_rect(0, FOOTER_Y, LCD_HRES, FOOTER_H, COLOR_BG);
-                if (s_net.ip[0] != '\0') {
-                    draw_ascii_centered(FOOTER_Y + 18, s_net.ip, COLOR_MUTED, 2);
-                }
+        draw_header();
+        if (s_ui == UI_STATE_READY) {
+            fill_rect(0, FOOTER_Y, LCD_HRES, FOOTER_H, COLOR_BG);
+            if (s_net.ip[0] != '\0') {
+                draw_ascii_centered(FOOTER_Y + 18, s_net.ip, COLOR_MUTED, 2);
             }
         }
     }

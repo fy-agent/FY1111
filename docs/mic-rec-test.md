@@ -21,6 +21,8 @@ Firmware behaviour:
   `CONNECTED`, capture does not start and one `FAIL` `reason=WIFI` is emitted.
   The LCD error/success scenes hold about 3 s, then return to the network home
   screen; repeating the gesture does not keep the X/失败 overlay up.
+  A later Wi-Fi drop leaves those rec/ASR scenes immediately and paints
+  `连接失败` plus the ASCII reason instead of keeping the last home screen.
 - With PIR seat occupancy latched, a far-to-near hand (about 200 mm then
   80-120 mm) starts the same record path. Near-to-far, or leaving the beam
   after near, stops it. Sky readings of about 20-70 mm are not a near hand.
