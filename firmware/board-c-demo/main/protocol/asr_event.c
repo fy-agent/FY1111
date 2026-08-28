@@ -74,7 +74,11 @@ bool ventured_format_asr_event(char *buffer, size_t capacity, const ventured_asr
                                status->sequence, escaped);
         return written > 0 && (size_t)written < capacity;
     }
-    if (status->state == VENTURED_ASR_FAIL && status->reason[0] != '\0') {
+    if (status->state == VENTURED_ASR_FAIL && status->reason[0] != '\0' &&
+        (strcmp(status->reason, "WIFI") == 0 || strcmp(status->reason, "KEY") == 0 ||
+         strcmp(status->reason, "AUTH") == 0 || strcmp(status->reason, "FORMAT") == 0 ||
+         strcmp(status->reason, "HTTP") == 0 || strcmp(status->reason, "MEM") == 0 ||
+         strcmp(status->reason, "BUSY") == 0 || strcmp(status->reason, "CANCEL") == 0)) {
         int written = snprintf(buffer, capacity, "VKEY_ASR/1 {\"seq\":%" PRIu32 ",\"state\":\"FAIL\",\"reason\":\"%s\"}\n",
                                status->sequence, status->reason);
         return written > 0 && (size_t)written < capacity;

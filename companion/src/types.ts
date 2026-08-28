@@ -1,4 +1,4 @@
-export const INPUT_IDS = ["ENCODER_CW", "ENCODER_CCW", "ENCODER_PRESS"] as const;
+export const INPUT_IDS = ["ENCODER_CW", "ENCODER_CCW", "ENCODER_PRESS", "BUTTON_A", "BUTTON_B"] as const;
 export type InputId = (typeof INPUT_IDS)[number];
 export type Modifier = "CTRL" | "ALT" | "SHIFT";
 export type PrimaryKey = string;
@@ -51,6 +51,9 @@ export interface NetworkStatus {
   asrState: string | null;
   asrText: string | null;
   asrReason: string | null;
+  pir: boolean | null;
+  tofMm: number | null;
+  sensorState: string | null;
 }
 
 export interface DeviceSettings {
@@ -91,7 +94,10 @@ export const EMPTY_NETWORK: NetworkStatus = {
   recReason: null,
   asrState: null,
   asrText: null,
-  asrReason: null
+  asrReason: null,
+  pir: null,
+  tofMm: null,
+  sensorState: null
 };
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {

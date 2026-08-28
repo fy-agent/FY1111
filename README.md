@@ -2,7 +2,7 @@
 
 This repository contains a deliberately small, offline-first hardware hackathon
 demo. Board C firmware sends one versioned physical-input event per serial line; the
-Companion maps the three fixed inputs to locally configured keyboard chords.
+Companion maps the five fixed inputs to locally configured keyboard chords.
 
 The project is not a flashing guide and does not claim physical hardware or
 Windows input-injection acceptance from its offline checks.
@@ -68,6 +68,8 @@ After selecting the intended serial port and saving the profile, start the
 Companion in dry-run mode. The production dry-run reads that selected port and
 resolves mappings but never constructs an input dispatcher. The browser fixture
 tests the same UI flow with fakes and never opens a real port.
+Two extra press-to-ground buttons use GPIO10 (`BUTTON_A`) and GPIO11
+(`BUTTON_B`) with the same idle-HIGH / pressed-LOW wiring as GPIO8.
 
 In live mode, each encoder rotation or GPIO8 press first restores the captured
 foreground window (already running, exact executable path), then sends one of
@@ -77,7 +79,7 @@ this first demo.
 ## Scope and future seam
 
 The window contains a serial selection, a collapsed **设置** panel for Wi-Fi
-and the SiliconFlow API key, a captured foreground target, and the three fixed
+and the SiliconFlow API key, a captured foreground target, and the five fixed
 physical-input rows. Secrets stay in `device.json`, not the shortcut profile.
 ESP32-S3 station mode is 2.4 GHz only; a 5 GHz SSID is rejected with a visible
 warning instead of staying on 连接中.

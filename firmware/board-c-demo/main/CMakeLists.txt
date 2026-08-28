@@ -9,8 +9,12 @@ idf_component_register(
         "protocol/link_debug.c"
         "protocol/rec_event.c"
         "protocol/asr_event.c"
+        "protocol/sensor_event.c"
+        "sensor/board_c_sensors.c"
+        "sensor/tof_hand_gesture.c"
         "audio/pcm_metrics.c"
         "audio/wav_pcm.c"
+        "audio/rec_gate.c"
         "audio/mic_rec.c"
         "net/wifi_sta.c"
         "net/asr_upload.c"
@@ -20,6 +24,6 @@ idf_component_register(
         "display/status_text.c"
         "display/font.c"
         "display/st7789_status.c"
-    INCLUDE_DIRS "." "input" "protocol" "net" "display" "audio"
-    REQUIRES driver esp_driver_i2s esp_wifi esp_event esp_netif nvs_flash esp_lcd lwip esp_http_client esp-tls mbedtls
+    INCLUDE_DIRS "." "input" "protocol" "net" "display" "audio" "sensor"
+    REQUIRES driver esp_driver_i2s esp_driver_i2c esp_timer esp_wifi esp_event esp_netif nvs_flash esp_lcd lwip esp_http_client esp-tls mbedtls vl53l0x
 )

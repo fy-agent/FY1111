@@ -185,6 +185,10 @@ static void remember_cloud(const ventured_device_config_t *config) {
     strncpy(s_model, config->model, sizeof(s_model) - 1);
 }
 
+bool ventured_wifi_link_ready(void) {
+    return s_status.state == VENTURED_NET_CONNECTED;
+}
+
 bool ventured_wifi_cloud_ready(void) {
     return s_status.state == VENTURED_NET_CONNECTED && s_api_key[0] != '\0' && s_model[0] != '\0';
 }

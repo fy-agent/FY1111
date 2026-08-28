@@ -12,11 +12,12 @@ exactly these fields:
 | Field | Type | Meaning |
 | --- | --- | --- |
 | `seq` | unsigned 32-bit integer | Monotonically increasing firmware event number |
-| `input` | string | `ENCODER_CW`, `ENCODER_CCW`, or `ENCODER_PRESS` |
+| `input` | string | `ENCODER_CW`, `ENCODER_CCW`, `ENCODER_PRESS`, `BUTTON_A`, or `BUTTON_B` |
 
 `ENCODER_PRESS` is the stable protocol ID for the independent active-low GPIO8
 confirm/action button. It is not an integrated rotary-encoder switch in this
-Board C wiring.
+Board C wiring. `BUTTON_A` is GPIO10 and `BUTTON_B` is GPIO11: same
+press-to-ground pull-up wiring as GPIO8. GPIO9 remains hold-to-talk only.
 
 Records with an unknown prefix, unknown field, invalid JSON/UTF-8, missing
 field, unknown input, or more than 1024 bytes are ignored. A Companion resets

@@ -21,6 +21,8 @@ static const char *const TAG = "board_c_encoder";
 static QueueHandle_t s_samples;
 static ventured_ec11_t s_encoder;
 static ventured_button_t s_action_button;
+static ventured_button_t s_button_a;
+static ventured_button_t s_button_b;
 static uint32_t s_sequence;
 static volatile uint32_t s_overflow_count;
 
@@ -61,10 +63,17 @@ static void encoder_worker(void *unused) {
         }
         now = xTaskGetTickCount();
         if ((int32_t)(now - next_button_scan) < 0) continue;
-        bool pressed = gpio_get_level(BOARD_C_ACTION_BUTTON_GPIO) == 0;
-        if (ventured_button_update(&s_action_button, pressed) ==
+        if (ventured_button_update(&s_action_button, gpio_get_level(BOARD_C_ACTION_BUTTON_GPIO) == 0) ==
             VENTURED_BUTTON_STABLE_PRESSED) {
             emit(VENTURED_INPUT_ENCODER_PRESS);
+        }
+        if (ventured_button_update(&s_button_a, gpio_get_level(BOARD_C_BUTTON_A_GPIO) == 0) ==
+            VENTURED_BUTTON_STABLE_PRESSED) {
+            emit(VENTURED_INPUT_BUTTON_A);
+        }
+        if (ventured_button_update(&s_button_b, gpio_get_level(BOARD_C_BUTTON_B_GPIO) == 0) ==
+            VENTURED_BUTTON_STABLE_PRESSED) {
+            emit(VENTURED_INPUT_BUTTON_B);
         }
         next_button_scan += pdMS_TO_TICKS(SCAN_PERIOD_MS);
         if ((int32_t)(now - next_button_scan) >= 0) {
@@ -83,7 +92,9 @@ static esp_err_t configure_gpio(void) {
         .intr_type = GPIO_INTR_DISABLE,
     };
     gpio_config_t button_io = {
-        .pin_bit_mask = (1ULL << BOARD_C_ACTION_BUTTON_GPIO),
+        .pin_bit_mask = (1ULL << BOARD_C_ACTION_BUTTON_GPIO) |
+                        (1ULL << BOARD_C_BUTTON_A_GPIO) |
+                        (1ULL << BOARD_C_BUTTON_B_GPIO),
         .mode = GPIO_MODE_INPUT,
         .pull_up_en = GPIO_PULLUP_ENABLE,
         .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -104,9 +115,10 @@ esp_err_t board_c_encoder_start(void) {
     const bool invert_direction = false;
 #endif
     ventured_ec11_init(&s_encoder, read_ab(), invert_direction);
-    ventured_button_init(&s_action_button,
-                         gpio_get_level(BOARD_C_ACTION_BUTTON_GPIO) == 0,
-                         ventured_button_required_samples(SCAN_PERIOD_MS, BUTTON_DEBOUNCE_MS));
+    uint16_t debounce = ventured_button_required_samples(SCAN_PERIOD_MS, BUTTON_DEBOUNCE_MS);
+    ventured_button_init(&s_action_button, gpio_get_level(BOARD_C_ACTION_BUTTON_GPIO) == 0, debounce);
+    ventured_button_init(&s_button_a, gpio_get_level(BOARD_C_BUTTON_A_GPIO) == 0, debounce);
+    ventured_button_init(&s_button_b, gpio_get_level(BOARD_C_BUTTON_B_GPIO) == 0, debounce);
     ESP_RETURN_ON_ERROR(gpio_install_isr_service(0), TAG, "install GPIO ISR");
     ESP_RETURN_ON_ERROR(gpio_isr_handler_add(BOARD_C_ENCODER_CLK_GPIO, encoder_isr, NULL),
                         TAG, "attach CLK ISR");

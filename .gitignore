@@ -26,6 +26,7 @@ firmware/board-c-demo/sdkconfig
 firmware/board-c-demo/sdkconfig.old
 firmware/board-c-demo/dependencies.lock
 firmware/board-c-demo/managed_components/
+firmware/board-c-demo/components/vl53l0x/
 firmware/board-c-demo/host_tests/build/
 
 # Companion generated output

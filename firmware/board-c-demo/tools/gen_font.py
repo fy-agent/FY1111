@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-CHARS = "未连接中已失败网络录音完成转写 0123456789.:-"
+CHARS = "未连接中已失败网络可录音完成转写 0123456789.:-"
 ROWS = 32
 COLS = 32
 FONT_CANDIDATES = [

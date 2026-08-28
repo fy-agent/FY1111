@@ -37,6 +37,7 @@ insertion is still a later extension.
 - Archived Trellis tasks:
   `.trellis/tasks/archive/2026-08/08-27-vibekey-hardware-hackathon-demo`
   `.trellis/tasks/archive/2026-08/08-27-wifi-oled-settings`
+  `.trellis/tasks/archive/2026-08/08-28-board-c-gesture-asr-companion`
 - Task status: `completed`
 - Demo source is committed on `master`. Generated IDF, Cargo, and Companion
   outputs stay gitignored. Inspect `git status` before editing and do not
@@ -101,8 +102,8 @@ shortcut demo:
 - A new ESP-IDF project for competition Board C.
 - A strict, versioned serial input protocol.
 - A compact Tauri 2 + React/Vite Windows Companion.
-- Exactly three fixed logical inputs:
-  `ENCODER_CW`, `ENCODER_CCW`, and `ENCODER_PRESS`.
+- Exactly five fixed logical inputs:
+  `ENCODER_CW`, `ENCODER_CCW`, `ENCODER_PRESS`, `BUTTON_A`, and `BUTTON_B`.
 - A one-window configuration UI containing:
   - serial-port refresh and selection;
   - current runtime state;
@@ -131,7 +132,8 @@ The Companion never reads or modifies Codex, WorkBuddy, or other third-party
 - TiDB Agent Stack runtime or credentials.
 - `agent_link`, ROROLEE, or BLE pairing.
 - Automatic text insertion, clipboard mutation, or a Windows IME.
-- Camera, SD card, speaker, sensor, motor, or WS2812 behavior.
+- Camera, SD card, speaker, motor, or WS2812 behavior.
+  PIR seat occupancy and VL53L0X hand-gesture record are implemented.
 - The original VibeKey Setup UI, Hook, Observer, WorkBuddy parser,
   provisioning, identity, MSC installer, security HID, application catalogs,
   or S1-S16 profile system.
@@ -155,10 +157,13 @@ Documented Board C resources:
 | Resource | Pins | Current MVP state |
 | --- | --- | --- |
 | Rotary channels | CLK GPIO6, DT GPIO7 | enabled |
-| Independent action input | GPIO8 | implemented in firmware, physical wiring pending |
+| Independent action input | GPIO8 | enabled; `ENCODER_PRESS` |
+| Extra press-to-ground buttons | GPIO10, GPIO11 | enabled; `BUTTON_A` / `BUTTON_B` |
 | Digital microphone | WS GPIO42, SD GPIO2, SCK GPIO41 | I2S RX hold-to-talk on GPIO9 |
-| Mic start button | GPIO9, active-low pull-up | enabled; never `VKEY_INPUT/1` |
-| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | network / rec / ASR status |
+| Mic start button | GPIO9, active-low pull-up | enabled; never `VKEY_INPUT/1`; also far→near / near→far |
+| PIR seat | GPIO16 | occupancy latch only |
+| VL53L0X ToF | SDA GPIO4, SCL GPIO5 | hand-gesture record; vendor tree gitignored |
+| ST7789 LCD | SCL GPIO21, SDA GPIO47, DC GPIO43, CS GPIO44 | ready shows 可录音; recording shows 录音中 |
 | WS2812 | GPIO48 | reserved, disabled |
 | Optional pull-up button | GPIO12 | reserved, disabled |
 
@@ -286,7 +291,7 @@ The Trellis implementation checklist currently marks these areas as created:
 Treat those checkboxes as task progress, not permanent proof. A new session
 should rerun the relevant checks before making a release or acceptance claim.
 
-Known remaining items after the archived demo task:
+Known remaining items after the archived gesture/ASR companion task:
 
 - competition-level HIL sign-off for encoder CW/CCW and GPIO8 restore plus
   shortcut dispatch;

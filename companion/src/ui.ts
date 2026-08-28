@@ -4,13 +4,17 @@ export const INPUT_LABELS = {
   ENCODER_CW: "顺时针旋转",
   ENCODER_CCW: "逆时针旋转",
   // ENCODER_PRESS remains the wire contract even though GPIO8 is an external button.
-  ENCODER_PRESS: "GPIO8 外接确认/动作按钮"
+  ENCODER_PRESS: "GPIO8 外接确认/动作按钮",
+  BUTTON_A: "GPIO10 下拉按键",
+  BUTTON_B: "GPIO11 下拉按键"
 } as const;
 
 export const INITIAL_MAPPINGS: MappingDraft[] = [
   { input: "ENCODER_CW", displayName: "上一项", keys: ["CTRL", "TAB"] },
   { input: "ENCODER_CCW", displayName: "下一项", keys: ["CTRL", "SHIFT", "TAB"] },
-  { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] }
+  { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] },
+  { input: "BUTTON_A", displayName: "按键 A", keys: ["CTRL", "1"] },
+  { input: "BUTTON_B", displayName: "按键 B", keys: ["CTRL", "2"] }
 ];
 
 export const RUNTIME_STATE_LABELS: Record<RuntimeStatus["state"], string> = {
@@ -30,8 +34,52 @@ export const NETWORK_STATE_LABELS: Record<NetworkState, string> = {
 export const WIFI_BAND_HINT = "开发板只支持 2.4GHz Wi-Fi。5G 热点搜不到，也不会变成已连接。";
 export const WIFI_FIVE_G_ALERT = "当前名称像 5G 热点，开发板连不上。请改用 2.4GHz 名称。";
 export const WIFI_CONNECTING_STUCK_HINT = "仍在连接中：若这是 5G 热点，开发板搜不到，请改用 2.4GHz 名称。";
-export const MIC_REC_HINT = "按住 GPIO9 录音，松开结束；有外部内存时最长约数分钟，存满会自动停。已联网且填写 Key 后，板子会把 16 kHz WAV 传到硅基，再把转写回传到这里。";
+export const MIC_REC_HINT = "未联网时不能录音。手从远(~200mm)收到近(80-120mm)开始录音，从近收到远结束。GPIO9 仍可按住录音。转写中再按 GPIO9 或再做一次远→近会停止转写。开关有短缓冲，避免测距抖动连开连关。有外部内存时最长约数分钟，存满会自动停。已联网且填写 Key 后，板子会把 16 kHz WAV 传到硅基，再把转写回传到这里。";
+export const SENSOR_HINT = "GPIO16 人体感应只判断座位是否有人，响应较慢。VL53L0X（SDA=GPIO4、SCL=GPIO5）用手势控录音：朝天 20-70mm 视为无效，远→近开，近→远关。";
 export const CLOUD_OPTIONAL_HINT = "API Key 可留空只测 Wi-Fi。转写默认 XingChenAGI/XingChenASR-V3.2-Ultra，也可自行填写其他模型。";
+
+export function asrReasonLabel(reason: string | null): string | null {
+  switch (reason) {
+    case "CANCEL": return "已取消";
+    case "BUSY": return "转写进行中";
+    case "WIFI": return "未联网";
+    case "KEY": return "缺少 Key 或模型";
+    case "AUTH": return "鉴权失败";
+    case "FORMAT": return "音频格式被拒";
+    case "HTTP": return "上传失败";
+    case "MEM": return "内存不足";
+    default: return null;
+  }
+}
+
+export function asrHeadline(asrState: string | null, asrReason: string | null, recState: string | null = null): string {
+  if (asrState === "START") return "正在转写…";
+  if (asrState === "FAIL" && asrReason === "CANCEL") return "转写已停止";
+  if (asrState === "FAIL") {
+    const label = asrReasonLabel(asrReason);
+    return label ? `转写失败 · ${label}` : "转写失败";
+  }
+  if (asrState === "DONE") return "转写完成";
+  if (recState === "START" || recState === "ACTIVE") return "录音中";
+  if (recState === "FAIL") return "录音失败";
+  return "可录音";
+}
+
+export function rememberTranscript(history: readonly string[], text: string | null, state: string | null): string[] {
+  const next = text?.trim() ?? "";
+  if (state !== "DONE" || next === "") return history.slice();
+  if (history[0] === next) return history.slice();
+  return [next, ...history.filter((item) => item !== next)].slice(0, 8);
+}
+
+export function recReasonLabel(reason: string | null): string | null {
+  switch (reason) {
+    case "WIFI": return "未联网";
+    case "I2S": return "麦克风未就绪";
+    case "BUSY": return "转写进行中";
+    default: return null;
+  }
+}
 
 export function recStateLabel(state: string | null): string | null {
   switch (state) {

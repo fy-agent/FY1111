@@ -6,13 +6,16 @@ The pin manifest in `main/board_c_pins.h` is the single source of truth.
 
 | Resource | Pins | State |
 | --- | --- | --- |
-| Rotary encoder | ENA/CLK 6, ENB/DT 7; SW unconnected | enabled |
+| Rotary encoder | ENA/CLK 6, ENB/DT 7; SW unconnected | enabled; one detent = one event |
 | External confirm/action button | pull-up SIG 8; 3.3 V and common GND | enabled |
+| Extra press-to-ground buttons | pull-up SIG 10 and 11; same wiring as GPIO8 | enabled; `BUTTON_A` / `BUTTON_B` |
 | Microphone start button | pull-up SIG 9; same active-low wiring as GPIO8 | enabled |
 | Digital microphone | WS 42, SD 2, SCK 41 | I2S RX record test |
 | ST7789 LCD | SCL 21, SDA 47, DC 43, CS 44 | 1.3" 240x240 status screen, 32x32 Chinese glyphs |
 | WS2812 | 48 | reserved, disabled |
 | Optional PTT button | 12 | reserved, disabled |
+| PIR motion | 16 | enabled; HIGH = motion |
+| VL53L0X ToF | SDA 4, SCL 5 | I2C0, address 0x29 |
 | Camera and SD-card resources | Board-documented resources | reserved; not allocated by this demo |
 
 Board C probe evidence is ESP32-S3 QFN56 with 8MB in-package octal PSRAM.
@@ -25,7 +28,15 @@ not an integrated encoder switch. GPIO9 uses the same active-low pull-up
 wiring as a hold-to-talk microphone start button and must never emit
 `VKEY_INPUT/1`. GPIO6/GPIO7 conflict with camera use and GPIO8 conflicts with
 DHT11 use, so camera or DHT11 enablement needs a separate pin-allocation
-decision. GPIO12 remains reserved and unused.
+decision. GPIO10 and GPIO11 take the two extra press-to-ground buttons.
+GPIO12 remains reserved and unused. GPIO16 is a slow PIR seat-occupancy gate.
+GPIO4/GPIO5 are the VL53L0X I2C pins. A far-to-near hand starts recording and
+near-to-far (or leaving the beam after near) stops it. GPIO9 hold-to-talk still
+works. Sky readings of about 20-70 mm are treated as empty, not as a near hand.
+Firmware clones
+https://github.com/pkolt/vl53l0x-esp-idf at configure time onto I2C0. The
+registry 1.0.0 package requires IDF 6; this demo keeps the same sources on
+IDF 5.5.4.
 
 ## Firmware
 
@@ -34,7 +45,8 @@ GPIO8 interrupts, queues ISR samples, scans the independent GPIO8 button on a
 10 ms cadence, emits only semantic `VKEY_INPUT/1` records on the ESP32-S3
 USB-Serial-JTAG console, and owns no shortcut mapping.
 Hold GPIO9 to capture I2S PCM until release, or until the PCM keep buffer
-fills (about a few minutes when 8MB PSRAM is present). The firmware emits
+fills (about a few minutes when 8MB PSRAM is present), but only while the
+station is `CONNECTED`. The firmware emits
 `VKEY_REC/1` RMS/peak metrics and, when cloud settings are present, uploads
 16 kHz mono WAV. See `docs/mic-rec-test.md`.
 The `VKEY_INPUT/1` record is documented in `protocol/input-event-v1.md`.
@@ -56,9 +68,11 @@ for the actual board, candidate image, port, write region, reset, and monitor.
 ## Companion setup
 
 Choose a port from the host list, capture the intended foreground program after
-the visible three-second delay, configure the three fixed mapping rows, and
+the visible three-second delay, configure the five fixed mapping rows, and
 save. The Chinese UI labels `ENCODER_PRESS` as the independent **GPIO8
-external confirm/action button**. Duplicate/incomplete chords block save.
+external confirm/action button**, and adds GPIO10/GPIO11 as **下拉按键**.
+Duplicate/incomplete chords block save. An older three-row profile must be
+saved again after this change.
 Start with **dry-run**, which reports a resolved event without creating a
 dispatcher. Live permission is visibly separate, session-only, and starts
 disabled after every application restart. In live mode, each encoder rotation

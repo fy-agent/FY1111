@@ -4,6 +4,7 @@ import { type DeviceSettings, type MappingDraft, type ProfileDraft, type Runtime
 import { DEFAULT_DEVICE_SETTINGS, EMPTY_NETWORK } from "./types";
 import { ChordField } from "./ChordField";
 import { SettingsPanel } from "./SettingsPanel";
+import { TranscriptPanel } from "./TranscriptPanel";
 import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, RUNTIME_STATE_LABELS, WIFI_CONNECTING_STUCK_HINT, WIFI_FIVE_G_ALERT } from "./ui";
 import { canonicalChord, deviceSettingsError, mappingErrors, ssidLooksFiveG } from "./validation";
 import "./app.css";
@@ -221,6 +222,7 @@ export function App({ host }: { host: CompanionHost }) {
     <header><div><h1>VentureD Companion</h1><p>Board C 快捷键演示：捕获一次前台，旋钮或 GPIO8 将其唤回后再发送映射快捷键</p></div><span className={`state ${runtime.state.toLowerCase()}`}>{RUNTIME_STATE_LABELS[runtime.state]}</span></header>
     <section className="device" aria-label="设备串口"><label>设备串口<select disabled={!editable} value={draft.serial.port} onChange={(event) => { setDraft((current) => ({ ...current, serial: { ...current.serial, port: event.target.value } })); setDirty(true); }}><option value="">请选择串口</option>{visiblePorts.map((port) => <option key={port}>{port}</option>)}</select></label><button disabled={!editable} onClick={() => void refresh()}>刷新</button><span>波特率 {draft.serial.baud}</span></section>
     <SettingsPanel settings={device} network={runtime.network} open={settingsOpen} busy={busy} canApply={canApply} error={settingsOpen ? deviceError : null} onToggle={() => setSettingsOpen((current) => !current)} onChange={(patch) => setDevice((current) => ({ ...current, ...patch }))} onApply={() => void applyNetwork()} />
+    <TranscriptPanel asrState={runtime.network.asrState} asrText={runtime.network.asrText} asrReason={runtime.network.asrReason} recState={runtime.network.recState} />
     <section className="target" aria-label="前台目标"><div><strong>前台目标</strong><p>{draft.target ? `${draft.target.processName} · ${draft.target.processPath}` : "尚未捕获。请先切到目标应用，再点 3 秒后捕获。"}</p></div><button disabled={!editable} onClick={() => void capture()}>3 秒后捕获</button></section>
     <section className="mappings" aria-label="固定输入映射">{draft.mappings.map((mapping, index) => <div className="mapping" key={mapping.input}><strong>{INPUT_LABELS[mapping.input]}</strong><input disabled={!editable} aria-label={`${INPUT_LABELS[mapping.input]} 名称`} value={mapping.displayName} onChange={(event) => update(index, { displayName: event.target.value })} /><ChordField label={`${INPUT_LABELS[mapping.input]} 快捷键`} keys={mapping.keys} disabled={!editable} onChange={(keys) => update(index, { keys })} /><span className="canonical">{canonicalChord(mapping.keys) ?? "点击后按下快捷键"}</span>{errors.get(mapping.input) && <small role="alert">{errors.get(mapping.input)}</small>}</div>)}</section>
     <section className="controls"><button disabled={!canSave} onClick={() => void save()}>保存配置</button><button disabled={!canStart} onClick={() => void startDryRun()}>启动演练模式</button><button className="live" disabled={!canStart} onClick={() => void startLive()}>为本次运行启用实时模式</button><button disabled={stopped || busy} onClick={() => void stop()}>停止运行</button></section>

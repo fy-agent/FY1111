@@ -8,6 +8,7 @@
 #include "link_debug.h"
 #include "net_event.h"
 #include "rec_event.h"
+#include "sensor_event.h"
 #include "status_text.h"
 #include "wav_pcm.h"
 
@@ -114,7 +115,7 @@ void test_rec_event_formatter_is_exact_and_not_an_input(void) {
     TEST_ASSERT_EQUAL_STRING(
         "VKEY_REC/1 {\"seq\":1,\"state\":\"START\",\"ms\":0,\"samples\":0,\"rms\":0,\"peak\":0}\n",
         record);
-    TEST_ASSERT_EQUAL_STRING("录音", ventured_rec_state_zh(VENTURED_REC_START));
+    TEST_ASSERT_EQUAL_STRING("录音中", ventured_rec_state_zh(VENTURED_REC_START));
     ventured_rec_status_t done = {
         .sequence = 3,
         .state = VENTURED_REC_DONE,
@@ -133,6 +134,12 @@ void test_rec_event_formatter_is_exact_and_not_an_input(void) {
     TEST_ASSERT_TRUE(ventured_format_rec_event(record, sizeof(record), &fail));
     TEST_ASSERT_EQUAL_STRING(
         "VKEY_REC/1 {\"seq\":4,\"state\":\"FAIL\",\"ms\":0,\"samples\":0,\"rms\":0,\"peak\":0,\"reason\":\"I2S\"}\n",
+        record);
+    strncpy(fail.reason, "WIFI", sizeof(fail.reason) - 1U);
+    fail.sequence = 5;
+    TEST_ASSERT_TRUE(ventured_format_rec_event(record, sizeof(record), &fail));
+    TEST_ASSERT_EQUAL_STRING(
+        "VKEY_REC/1 {\"seq\":5,\"state\":\"FAIL\",\"ms\":0,\"samples\":0,\"rms\":0,\"peak\":0,\"reason\":\"WIFI\"}\n",
         record);
     TEST_ASSERT_NULL(strstr(record, "VKEY_INPUT"));
 }
@@ -171,6 +178,29 @@ void test_wav_header_is_pcm16_mono_16k(void) {
     TEST_ASSERT_EQUAL_UINT8(16, header[34]);
 }
 
+void test_sensor_event_formatter_is_exact(void) {
+    char record[128];
+    ventured_sensor_status_t ok = {
+        .sequence = 1,
+        .pir = true,
+        .has_distance = true,
+        .dist_mm = 312,
+        .state = VENTURED_SENSOR_OK,
+    };
+    TEST_ASSERT_TRUE(ventured_format_sensor_event(record, sizeof(record), &ok));
+    TEST_ASSERT_EQUAL_STRING(
+        "VKEY_SENSOR/1 {\"seq\":1,\"pir\":true,\"state\":\"OK\",\"distMm\":312}\n",
+        record);
+    ventured_sensor_status_t fail = {
+        .sequence = 2,
+        .pir = false,
+        .state = VENTURED_SENSOR_TOF,
+    };
+    TEST_ASSERT_TRUE(ventured_format_sensor_event(record, sizeof(record), &fail));
+    TEST_ASSERT_EQUAL_STRING("VKEY_SENSOR/1 {\"seq\":2,\"pir\":false,\"state\":\"TOF\"}\n", record);
+    TEST_ASSERT_NULL(strstr(record, "VKEY_INPUT"));
+}
+
 void test_asr_event_extracts_text_and_omits_secrets(void) {
     char text[64];
     TEST_ASSERT_TRUE(ventured_asr_extract_text("{\"text\":\"今天天气不错\"}", text, sizeof(text)));
@@ -182,4 +212,8 @@ void test_asr_event_extracts_text_and_omits_secrets(void) {
     TEST_ASSERT_EQUAL_STRING("VKEY_ASR/1 {\"seq\":2,\"state\":\"DONE\",\"text\":\"今天天气不错\"}\n", record);
     TEST_ASSERT_NULL(strstr(record, "apiKey"));
     TEST_ASSERT_NULL(strstr(record, "Bearer"));
+    ventured_asr_status_t cancel = {.sequence = 3, .state = VENTURED_ASR_FAIL};
+    strncpy(cancel.reason, "CANCEL", sizeof(cancel.reason) - 1U);
+    TEST_ASSERT_TRUE(ventured_format_asr_event(record, sizeof(record), &cancel));
+    TEST_ASSERT_EQUAL_STRING("VKEY_ASR/1 {\"seq\":3,\"state\":\"FAIL\",\"reason\":\"CANCEL\"}\n", record);
 }

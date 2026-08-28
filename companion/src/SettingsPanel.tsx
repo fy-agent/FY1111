@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { DeviceSettings, NetworkStatus } from "./types";
 import { CLOUD_MODELS } from "./types";
-import { CLOUD_OPTIONAL_HINT, MIC_REC_HINT, networkChipLabel, networkReasonLabel, recStateLabel, WIFI_BAND_HINT, WIFI_FIVE_G_ALERT } from "./ui";
+import { CLOUD_OPTIONAL_HINT, MIC_REC_HINT, SENSOR_HINT, networkChipLabel, networkReasonLabel, recReasonLabel, recStateLabel, WIFI_BAND_HINT, WIFI_FIVE_G_ALERT } from "./ui";
 import { ssidLooksFiveG } from "./validation";
 
 function PasswordField({
@@ -104,16 +104,18 @@ export function SettingsPanel({
       </label>
       <p className="hint">{CLOUD_OPTIONAL_HINT}</p>
       <p className="hint">{MIC_REC_HINT}</p>
+      <p className="hint">{SENSOR_HINT}</p>
       <button type="button" disabled={!canApply} onClick={onApply}>保存并下发联网</button>
       {fiveG && <small role="alert" className="warn">{WIFI_FIVE_G_ALERT}</small>}
       {error && <small role="alert">{error}</small>}
       {reason && <p className="warn">{reason}</p>}
       {network.ssid && <p>当前 SSID {network.ssid}{network.rssi != null ? ` · ${network.rssi} dBm` : ""}{network.beats != null ? ` · 心跳 ${network.beats}` : ""}</p>}
       {network.pingHost && <p>连通探测 {network.pingHost}{network.pingOk ? ` 成功 ${network.pingMs ?? "-"} ms` : " 失败"}{network.pingSent != null ? ` · 丢 ${network.pingLost ?? 0}/${network.pingSent}` : ""}</p>}
-      {rec && <p>{rec}{network.recMs != null ? ` · ${network.recMs} ms` : ""}{network.recRms != null ? ` · RMS ${network.recRms}` : ""}{network.recPeak != null ? ` · 峰 ${network.recPeak}` : ""}{network.recSilence ? " · 静音" : ""}{network.recReason ? ` · ${network.recReason}` : ""}</p>}
-      {network.asrState === "START" && <p>正在转写…</p>}
-      {network.asrText && <p>转写结果 {network.asrText}</p>}
-      {network.asrState === "FAIL" && <p className="warn">转写失败{network.asrReason ? ` · ${network.asrReason}` : ""}</p>}
+      {rec && <p>{rec}{network.recMs != null ? ` · ${network.recMs} ms` : ""}{network.recRms != null ? ` · RMS ${network.recRms}` : ""}{network.recPeak != null ? ` · 峰 ${network.recPeak}` : ""}{network.recSilence ? " · 静音" : ""}{network.recReason ? ` · ${recReasonLabel(network.recReason) ?? network.recReason}` : ""}</p>}
+      {network.pir != null && <p>座位 {network.pir ? "有人" : "无人"}</p>}
+      {network.tofMm != null && <p>激光测距 {network.tofMm} mm</p>}
+      {network.sensorState === "TOF" && <p className="warn">激光测距未就绪</p>}
+      {network.sensorState === "I2C" && <p className="warn">I2C 总线未就绪</p>}
       {network.lastLog && <p>串口日志 {network.lastLog}</p>}
     </div>}
   </section>;

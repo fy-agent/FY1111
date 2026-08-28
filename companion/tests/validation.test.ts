@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonicalChord, chordIdentity, deviceSettingsError, displayNameError, mappingErrors, modifiersFromKeyboardEvent, primaryFromKeyboardEvent, ssidLooksFiveG } from "../src/validation";
 import { createFixtureHost } from "../src/host";
-import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, MIC_REC_HINT, NETWORK_STATE_LABELS, RUNTIME_STATE_LABELS, WIFI_BAND_HINT, networkChipLabel, networkReasonLabel, recStateLabel } from "../src/ui";
+import { asrHeadline, asrReasonLabel, formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, MIC_REC_HINT, NETWORK_STATE_LABELS, rememberTranscript, RUNTIME_STATE_LABELS, SENSOR_HINT, WIFI_BAND_HINT, networkChipLabel, networkReasonLabel, recReasonLabel, recStateLabel } from "../src/ui";
 import packageJson from "../package.json";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -31,7 +31,10 @@ describe("mapping validation", () => {
   });
   it("projects the independent GPIO8 action button and Chinese runtime controls without changing protocol IDs", () => {
     expect(INPUT_LABELS.ENCODER_PRESS).toBe("GPIO8 外接确认/动作按钮");
+    expect(INPUT_LABELS.BUTTON_A).toBe("GPIO10 下拉按键");
+    expect(INPUT_LABELS.BUTTON_B).toBe("GPIO11 下拉按键");
     expect(INITIAL_MAPPINGS.find((mapping) => mapping.input === "ENCODER_PRESS")?.displayName).toBe("确认动作");
+    expect(INITIAL_MAPPINGS).toHaveLength(5);
     expect(RUNTIME_STATE_LABELS.STOPPED).toBe("已停止");
     expect(RUNTIME_STATE_LABELS.DRY_RUN).toBe("演练模式");
     expect(formatRuntimeText("SERIAL_GAP/2: ENCODER_CW → CTRL+TAB · dry-run")).toBe("SERIAL_GAP/2: ENCODER_CW → CTRL+TAB · 演练模式");
@@ -41,6 +44,22 @@ describe("mapping validation", () => {
     expect(formatRuntimeText("foreground restore target is missing · rejected")).toBe("前台恢复目标不存在 · 已拒绝");
     expect(formatRuntimeText("foreground restore was rejected · rejected")).toBe("前台恢复被拒绝 · 已拒绝");
     expect(MIC_REC_HINT).toContain("GPIO9");
+    expect(SENSOR_HINT).toContain("GPIO16");
+    expect(SENSOR_HINT).toContain("GPIO4");
+    expect(MIC_REC_HINT).toContain("远");
+    expect(MIC_REC_HINT).toContain("停止转写");
+    expect(MIC_REC_HINT).toContain("未联网");
+    expect(asrReasonLabel("CANCEL")).toBe("已取消");
+    expect(asrHeadline(null, null, null)).toBe("可录音");
+    expect(asrHeadline("START", null, "DONE")).toBe("正在转写…");
+    expect(asrHeadline("DONE", null, "DONE")).toBe("转写完成");
+    expect(asrHeadline("FAIL", "CANCEL", null)).toBe("转写已停止");
+    expect(asrHeadline("FAIL", "HTTP", null)).toBe("转写失败 · 上传失败");
+    expect(asrHeadline(null, null, "ACTIVE")).toBe("录音中");
+    expect(rememberTranscript([], "今天天气不错", "DONE")).toEqual(["今天天气不错"]);
+    expect(rememberTranscript(["今天天气不错"], null, "START")).toEqual(["今天天气不错"]);
+    expect(rememberTranscript(["上一句"], "今天天气不错", "DONE")).toEqual(["今天天气不错", "上一句"]);
+    expect(recReasonLabel("WIFI")).toBe("未联网");
     expect(recStateLabel("ACTIVE")).toBe("录音中");
     expect(recStateLabel("DONE")).toBe("录音完成");
     expect(recStateLabel("FAIL")).toBe("录音失败");
@@ -63,7 +82,9 @@ describe("mapping validation", () => {
     const saved = await host.saveProfile({ version: 1, revision: null, serial: { port: "fixture", baud: 115200 }, target: { processName: "Fixture.exe", processPath: "C:\\Fixture\\Fixture.exe" }, mappings: [
       { input: "ENCODER_CW", displayName: "上一项", keys: ["CTRL", "TAB"] },
       { input: "ENCODER_CCW", displayName: "下一项", keys: ["CTRL", "SHIFT", "TAB"] },
-      { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] }
+      { input: "ENCODER_PRESS", displayName: "确认动作", keys: ["ENTER"] },
+      { input: "BUTTON_A", displayName: "按键 A", keys: ["CTRL", "1"] },
+      { input: "BUTTON_B", displayName: "按键 B", keys: ["CTRL", "2"] }
     ] });
     expect((await host.loadProfile())?.revision).toBe(saved.revision);
     expect((await host.loadProfile())?.serial).toEqual({ port: "fixture", baud: 115200 });

@@ -7,6 +7,7 @@
 #include "display/st7789_status.h"
 #include "input/board_c_encoder.h"
 #include "net/asr_upload.h"
+#include "sensor/board_c_sensors.h"
 #include "net/config_rx.h"
 #include "net/status_out.h"
 #include "net/wifi_sta.h"
@@ -35,5 +36,8 @@ void app_main(void) {
     ESP_ERROR_CHECK(board_c_encoder_start());
     ESP_ERROR_CHECK(ventured_asr_start());
     ESP_ERROR_CHECK(ventured_mic_rec_start());
-    ESP_LOGI(TAG, "encoder + wifi + mic + asr demo ready");
+    if (board_c_sensors_start() != ESP_OK) {
+        ESP_LOGW(TAG, "pir/tof sensors unavailable");
+    }
+    ESP_LOGI(TAG, "encoder + wifi + mic + asr + sensors demo ready");
 }

@@ -1,15 +1,20 @@
 import { expect, test } from "@playwright/test";
 
-test("中文夹具窗口无横向溢出，并展示三个固定输入行", async ({ page }) => {
+test("中文夹具窗口无横向溢出，并展示五个固定输入行", async ({ page }) => {
   await page.goto("http://127.0.0.1:1425");
   await expect(page.locator("html")).toHaveAttribute("lang", "zh-CN");
   await expect(page.getByRole("heading", { name: "VentureD Companion" })).toBeVisible();
-  await expect(page.getByLabel("固定输入映射").locator(".mapping")).toHaveCount(3);
+  await expect(page.getByLabel("固定输入映射").locator(".mapping")).toHaveCount(5);
   await expect(page.getByText("GPIO8 外接确认/动作按钮", { exact: true })).toBeVisible();
+  await expect(page.getByText("GPIO10 下拉按键", { exact: true })).toBeVisible();
+  await expect(page.getByText("GPIO11 下拉按键", { exact: true })).toBeVisible();
   await expect(page.locator(".state")).toHaveText("已停止");
   await expect(page.getByRole("button", { name: "为本次运行启用实时模式" })).toBeDisabled();
   await expect(page.getByText("尚未捕获。请先切到目标应用，再点 3 秒后捕获。")).toBeVisible();
   await expect(page.getByRole("button", { name: "设置 未连接" })).toBeVisible();
+  await expect(page.getByLabel("转写结果")).toBeVisible();
+  await expect(page.getByText("可录音")).toBeVisible();
+  await expect(page.getByText("说完后，转写会出现在这里。")).toBeVisible();
   await expect(page.locator(".net")).toHaveText("未连接");
   await expect(page.getByText("Wi-Fi 名称")).toHaveCount(0);
   const initialText = await page.locator("body").innerText();
@@ -46,19 +51,20 @@ test("中文夹具窗口无横向溢出，并展示三个固定输入行", async
   await page.getByRole("button", { name: /设置/ }).click();
   await expect(page.getByText("开发板只支持 2.4GHz Wi-Fi")).toBeVisible();
   await page.getByLabel("Wi-Fi 名称").fill("cafe");
-  await page.getByLabel("Wi-Fi 密码").fill("secret");
+  await page.getByRole("textbox", { name: "Wi-Fi 密码" }).fill("secret");
   await expect(page.getByLabel("SiliconFlow API Key")).toBeVisible();
   await expect(page.getByLabel("转写模型")).toBeVisible();
-  await expect(page.getByText("API Key 和转写模型可留空")).toBeVisible();
-  await expect(page.getByText("按住 GPIO9 开始录音")).toBeVisible();
+  await expect(page.getByText("API Key 可留空")).toBeVisible();
+  await expect(page.getByText(/按住 GPIO9/)).toBeVisible();
+  await expect(page.getByText(/人体感应接 GPIO16/)).toBeVisible();
   await expect(page.getByRole("button", { name: "显示Wi-Fi 密码" })).toBeVisible();
   await page.getByRole("button", { name: "保存并下发联网" }).click();
   await expect(page.getByText("设备已联网。")).toBeVisible();
   await expect(page.getByText("已连接 10.0.0.8")).toBeVisible();
   await expect(page.getByRole("button", { name: "显示Wi-Fi 密码" })).toBeVisible();
   await page.getByRole("button", { name: "显示Wi-Fi 密码" }).click();
-  await expect(page.getByLabel("Wi-Fi 密码")).toHaveValue("secret");
-  await expect(page.getByLabel("Wi-Fi 密码")).toHaveAttribute("type", "text");
+  await expect(page.getByRole("textbox", { name: "Wi-Fi 密码" })).toHaveValue("secret");
+  await expect(page.getByRole("textbox", { name: "Wi-Fi 密码" })).toHaveAttribute("type", "text");
   await page.getByLabel("Wi-Fi 名称").fill("Home-5G");
   await expect(page.getByRole("alert").filter({ hasText: "当前名称像 5G 热点" })).toBeVisible();
   await page.getByRole("button", { name: "保存并下发联网" }).click();

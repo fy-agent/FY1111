@@ -8,6 +8,8 @@ const char *ventured_input_token(ventured_input_t input) {
         case VENTURED_INPUT_ENCODER_CW: return "ENCODER_CW";
         case VENTURED_INPUT_ENCODER_CCW: return "ENCODER_CCW";
         case VENTURED_INPUT_ENCODER_PRESS: return "ENCODER_PRESS";
+        case VENTURED_INPUT_BUTTON_A: return "BUTTON_A";
+        case VENTURED_INPUT_BUTTON_B: return "BUTTON_B";
         default: return NULL;
     }
 }

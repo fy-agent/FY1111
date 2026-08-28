@@ -43,11 +43,13 @@ bool ventured_ec11_update(ventured_ec11_t *encoder, uint8_t normalized_ab,
     if (next > VENTURED_EC11_COMPLETE_DETENT_STEPS) next = VENTURED_EC11_COMPLETE_DETENT_STEPS;
     if (next < -VENTURED_EC11_COMPLETE_DETENT_STEPS) next = -VENTURED_EC11_COMPLETE_DETENT_STEPS;
     encoder->quarter_steps = (int8_t)next;
-    if (normalized_ab != encoder->anchor_ab) return false;
+    if (encoder->quarter_steps != VENTURED_EC11_COMPLETE_DETENT_STEPS &&
+        encoder->quarter_steps != -VENTURED_EC11_COMPLETE_DETENT_STEPS) {
+        return false;
+    }
     int8_t completed = encoder->quarter_steps;
     encoder->quarter_steps = 0;
-    if (completed != VENTURED_EC11_COMPLETE_DETENT_STEPS &&
-        completed != -VENTURED_EC11_COMPLETE_DETENT_STEPS) return false;
+    encoder->anchor_ab = normalized_ab;
     bool clockwise = completed == VENTURED_EC11_COMPLETE_DETENT_STEPS;
     *event = (encoder->invert_direction ? !clockwise : clockwise)
                  ? VENTURED_INPUT_ENCODER_CW : VENTURED_INPUT_ENCODER_CCW;

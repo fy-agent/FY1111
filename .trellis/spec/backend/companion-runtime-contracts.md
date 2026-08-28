@@ -59,7 +59,7 @@ not use it as the ordinary debug entry point.
 Firmware emits one bounded UTF-8 record per line:
 
 ```text
-VKEY_INPUT/1 {"seq":<u32>,"input":"ENCODER_CW|ENCODER_CCW|ENCODER_PRESS"}
+VKEY_INPUT/1 {"seq":<u32>,"input":"ENCODER_CW|ENCODER_CCW|ENCODER_PRESS|BUTTON_A|BUTTON_B"}
 ```
 
 Host-to-device Wi-Fi/API configuration and device-to-host network status use
@@ -68,8 +68,8 @@ the additional record kinds in `protocol/device-link-v1.md`:
 ```text
 VKEY_CONFIG/1 {"seq":<u32>,"ssid":"...","password":"...","apiKey":"...","model":"..."}
 VKEY_NET/1 {"seq":<u32>,"state":"DISCONNECTED|CONNECTING|CONNECTED|FAILED","ssid":"...","ip":"...","rssi":<i32>,"reason"?:"AUTH|TIMEOUT|NO_AP|BAND|UNKNOWN"}
-VKEY_REC/1 {"seq":<u32>,"state":"START|ACTIVE|DONE|FAIL","ms":<u32>,"samples":<u32>,"rms":<u32>,"peak":<u32>,"silence"?:bool,"reason"?:"I2S|BUSY|UNKNOWN"}
-VKEY_ASR/1 {"seq":<u32>,"state":"START|DONE|FAIL","text"?:"...","reason"?:"WIFI|KEY|AUTH|FORMAT|HTTP|MEM|BUSY"}
+VKEY_REC/1 {"seq":<u32>,"state":"START|ACTIVE|DONE|FAIL","ms":<u32>,"samples":<u32>,"rms":<u32>,"peak":<u32>,"silence"?:bool,"reason"?:"I2S|BUSY|WIFI|UNKNOWN"}
+VKEY_ASR/1 {"seq":<u32>,"state":"START|DONE|FAIL","text"?:"...","reason"?:"WIFI|KEY|AUTH|FORMAT|HTTP|MEM|BUSY|CANCEL"}
 ```
 
 `apiKey` and `model` may be empty (Wi-Fi only). A non-empty model is any
@@ -115,10 +115,14 @@ The persisted shortcut profile is exactly:
   protocol IDs, GPIO numbers, Tauri command names, and shortcut tokens remain
   unchanged technical identifiers. English native status strings are projected
   through one frontend localization owner before display.
-- GPIO6/GPIO7 own the encoder phases. GPIO8 owns an independent active-low
-  external confirm/action button while retaining the stable `ENCODER_PRESS`
-  protocol ID; it is not presented as an integrated encoder switch. GPIO9 owns
-  the microphone hold-to-talk button and reports `VKEY_REC/1` only.
+- GPIO6/GPIO7 own the encoder phases. One physical detent is two Gray-code
+  quarter-steps and must emit one shortcut event. GPIO8 owns an independent
+  active-low external confirm/action button while retaining the stable
+  `ENCODER_PRESS` protocol ID; it is not presented as an integrated encoder
+  switch. GPIO10 and GPIO11 own extra press-to-ground buttons `BUTTON_A` and
+  `BUTTON_B`. GPIO9 owns the microphone hold-to-talk button and reports
+  `VKEY_REC/1` only. GPIO12 stays reserved. GPIO16 is PIR. GPIO4/GPIO5 are
+  VL53L0X I2C SDA/SCL and report `VKEY_SENSOR/1` only.
 - Shortcut chords are recorded from a real key-down combination after the user
   clicks the mapping control. Allowed tokens are `CTRL`/`ALT`/`SHIFT` plus one
   or more primaries from `A-Z`, `0-9`, `F1-F24`, `ENTER`, `TAB`, `ESC`,
@@ -177,7 +181,7 @@ messages.
 - TypeScript tests assert Rust-equivalent name/chord validation and saved-profile
   hydration, Chinese state/error projection including restore missing/rejected,
   command-script boundaries, and that Tauri uses the separate native bridge.
-- Browser visual tests assert exactly three mapping rows, a collapsed settings
+- Browser visual tests assert exactly five mapping rows, a collapsed settings
   control (no Wi-Fi fields until expanded), initial stopped/live off state, the
   configure/save/dry-run/stop flow, the fixture apply-network flow, and no
   clipping, overlap, or horizontal overflow. They also assert `lang="zh-CN"`,

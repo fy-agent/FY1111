@@ -1,8 +1,9 @@
 # Board C microphone record test
 
-This increment verifies I2S capture and GPIO9 hold-to-talk. When Wi-Fi and a
-SiliconFlow key are configured, the firmware also uploads 16 kHz mono WAV and
-returns `VKEY_ASR/1`. Focused-window text insertion is still out of scope.
+This increment verifies I2S capture, GPIO9 hold-to-talk, and VL53L0X
+far-to-near / near-to-far hand control. When Wi-Fi and a SiliconFlow key are
+configured, the firmware also uploads 16 kHz mono WAV and returns `VKEY_ASR/1`.
+Focused-window text insertion is still out of scope.
 
 ## Hardware
 
@@ -16,9 +17,22 @@ GPIO8 remains the shortcut confirm button. GPIO12 stays reserved.
 Firmware behaviour:
 
 - Press and hold GPIO9: I2S starts, LCD shows `录音 <rms>`, serial emits
-  `VKEY_REC/1` `START` then `ACTIVE` about every 250 ms.
-- Release, or when the keep buffer is full: I2S stops, LCD shows `完成 <rms>`
-  or `失败`, serial emits `DONE` with `silence` or `FAIL` with `reason=I2S`.
+  `VKEY_REC/1` `START` then `ACTIVE` about every 250 ms. If the station is not
+  `CONNECTED`, capture does not start and one `FAIL` `reason=WIFI` is emitted.
+  The LCD error/success scenes hold about 3 s, then return to the network home
+  screen; repeating the gesture does not keep the X/失败 overlay up.
+- With PIR seat occupancy latched, a far-to-near hand (about 200 mm then
+  80-120 mm) starts the same record path. Near-to-far, or leaving the beam
+  after near, stops it. Sky readings of about 20-70 mm are not a near hand.
+- Release GPIO9 and/or finish the leave gesture, or when the keep buffer is
+  full: I2S stops, LCD shows `完成 <rms>` or `失败`, serial emits `DONE` with
+  `silence` or `FAIL` with `reason=I2S`.
+- While `VKEY_ASR/1` `START` is in flight, GPIO9 or a far-to-near hand cancels
+  the upload (`FAIL` `reason=CANCEL`) instead of emitting `BUSY` every scan.
+  Start and stop wait through a short dwell/cooldown so a withdraw bounce does
+  not restart recording or redraw the LCD error screen.
+- After a silent take, a failed take, or ASR done/fail/cancel, the PCM keep
+  buffer is wiped immediately so the previous recording does not stay in PSRAM.
 - GPIO9 never emits `VKEY_INPUT/1`.
 
 Default slot is I2S left. If speaking keeps RMS at 0, rebuild with

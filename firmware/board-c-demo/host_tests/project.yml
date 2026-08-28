@@ -14,10 +14,13 @@
     - ../main/protocol
     - ../main/display
     - ../main/audio
+    - ../main/sensor
 :files:
   :source:
     - ../main/audio/pcm_metrics.c
     - ../main/audio/wav_pcm.c
+    - ../main/audio/rec_gate.c
+    - ../main/sensor/tof_hand_gesture.c
 :plugins:
   :enabled:
     - module_generator

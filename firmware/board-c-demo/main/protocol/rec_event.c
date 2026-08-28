@@ -17,7 +17,7 @@ const char *ventured_rec_state_token(ventured_rec_state_t state) {
 const char *ventured_rec_state_zh(ventured_rec_state_t state) {
     switch (state) {
         case VENTURED_REC_START:
-        case VENTURED_REC_ACTIVE: return "录音";
+        case VENTURED_REC_ACTIVE: return "录音中";
         case VENTURED_REC_DONE: return "完成";
         case VENTURED_REC_FAIL: return "失败";
         default: return "失败";
@@ -27,6 +27,7 @@ const char *ventured_rec_state_zh(ventured_rec_state_t state) {
 static bool reason_allowed(const char *reason) {
     return strcmp(reason, "I2S") == 0 ||
            strcmp(reason, "BUSY") == 0 ||
+           strcmp(reason, "WIFI") == 0 ||
            strcmp(reason, "UNKNOWN") == 0;
 }
 

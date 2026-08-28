@@ -427,6 +427,7 @@ impl RuntimeController {
             .write_line(&line)
             .map_err(|_| RuntimeError::Serial)?;
         let looks_5g = ssid_looks_5g(&settings.ssid);
+        let previous = self.status.network.clone();
         self.status.network = NetworkStatus {
             state: if looks_5g {
                 NetworkState::Failed
@@ -435,6 +436,16 @@ impl RuntimeController {
             },
             ssid: settings.ssid.clone(),
             reason: looks_5g.then(|| "BAND".to_owned()),
+            asr_state: previous.asr_state,
+            asr_text: previous.asr_text,
+            asr_reason: previous.asr_reason,
+            rec_state: previous.rec_state,
+            rec_ms: previous.rec_ms,
+            rec_samples: previous.rec_samples,
+            rec_rms: previous.rec_rms,
+            rec_peak: previous.rec_peak,
+            rec_silence: previous.rec_silence,
+            rec_reason: previous.rec_reason,
             ..NetworkStatus::default()
         };
         if self.status.state == RuntimeMode::Stopped {
@@ -668,12 +679,12 @@ mod tests {
                 .map(|input| MappingDraft {
                     input,
                     display_name: input.to_string(),
-                    keys: if input == InputId::EncoderCw {
-                        vec!["CTRL".into(), "TAB".into()]
-                    } else if input == InputId::EncoderCcw {
-                        vec!["CTRL".into(), "SHIFT".into(), "TAB".into()]
-                    } else {
-                        vec!["ENTER".into()]
+                    keys: match input {
+                        InputId::EncoderCw => vec!["CTRL".into(), "TAB".into()],
+                        InputId::EncoderCcw => vec!["CTRL".into(), "SHIFT".into(), "TAB".into()],
+                        InputId::EncoderPress => vec!["ENTER".into()],
+                        InputId::ButtonA => vec!["CTRL".into(), "1".into()],
+                        InputId::ButtonB => vec!["CTRL".into(), "2".into()],
                     },
                 })
                 .collect(),

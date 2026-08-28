@@ -5,7 +5,7 @@
 
 #include "input_event.h"
 
-#define VENTURED_EC11_COMPLETE_DETENT_STEPS 4
+#define VENTURED_EC11_COMPLETE_DETENT_STEPS 2
 
 typedef struct {
     uint8_t previous_ab;

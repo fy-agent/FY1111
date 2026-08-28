@@ -13,14 +13,20 @@
 #include "lwip/sockets.h"
 #include "ping/ping_sock.h"
 
+#include "asr_upload.h"
 #include "protocol/link_debug.h"
 #include "status_out.h"
 #include "wifi_sta.h"
 
 static const char *TAG = "board_c_link";
-static const char *k_hosts[] = {"8.8.8.8", "dns.google", "www.baidu.com"};
+static const char *k_ping_host = "8.8.8.8";
+#define HEARTBEAT_MS 10000U
+#define PING_PERIOD_MS 60000U
+#define PING_COUNT 1U
+#define PING_TIMEOUT_MS 800U
 static uint32_t s_ping_seq;
 static TaskHandle_t s_task;
+static volatile bool s_want_ping;
 
 typedef struct {
     uint32_t sent;
@@ -85,7 +91,7 @@ static void ping_one(const char *host) {
     if (!resolve_ipv4(host, &target)) {
         ventured_link_logf("dns fail host=%s", host);
         char record[192];
-        if (ventured_format_ping_event(record, sizeof(record), ++s_ping_seq, host, false, 0, 3, 0)) {
+        if (ventured_format_ping_event(record, sizeof(record), ++s_ping_seq, host, false, 0, 1, 0)) {
             emit_line(record);
         }
         return;
@@ -95,9 +101,9 @@ static void ping_one(const char *host) {
     };
     esp_ping_config_t config = ESP_PING_DEFAULT_CONFIG();
     config.target_addr = target;
-    config.count = 3;
-    config.interval_ms = 400;
-    config.timeout_ms = 1500;
+    config.count = PING_COUNT;
+    config.interval_ms = 200;
+    config.timeout_ms = PING_TIMEOUT_MS;
     config.task_stack_size = 3072;
     esp_ping_callbacks_t callbacks = {
         .cb_args = &wait,
@@ -111,7 +117,7 @@ static void ping_one(const char *host) {
         return;
     }
     esp_ping_start(ping);
-    if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(8000)) == 0) {
+    if (ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(PING_TIMEOUT_MS + 500U)) == 0) {
         ventured_link_logf("ping wait timeout host=%s", host);
         esp_ping_stop(ping);
         esp_ping_delete_session(ping);
@@ -135,20 +141,30 @@ void ventured_link_probe_now(void) {
         return;
     }
     ventured_wifi_publish_current();
-    for (size_t i = 0; i < sizeof(k_hosts) / sizeof(k_hosts[0]); ++i) {
-        ping_one(k_hosts[i]);
+    if (ventured_asr_busy()) {
+        ventured_link_logf("probe deferred; asr busy");
+        return;
     }
+    ping_one(k_ping_host);
 }
 
 static void probe_task(void *arg) {
     (void)arg;
+    TickType_t last_ping = 0;
     for (;;) {
-        ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(10000));
+        bool kicked = ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(HEARTBEAT_MS)) > 0;
         ventured_net_status_t status;
         ventured_wifi_copy_status(&status);
         if (status.state != VENTURED_NET_CONNECTED) continue;
         ventured_link_logf("heartbeat ip=%s rssi=%d ssid=%s", status.ip, status.rssi, status.ssid);
-        ventured_link_probe_now();
+        ventured_wifi_publish_current();
+        TickType_t now = xTaskGetTickCount();
+        bool due = last_ping == 0 || (now - last_ping) >= pdMS_TO_TICKS(PING_PERIOD_MS);
+        if ((kicked || s_want_ping || due) && !ventured_asr_busy()) {
+            s_want_ping = false;
+            ping_one(k_ping_host);
+            last_ping = xTaskGetTickCount();
+        }
     }
 }
 
@@ -162,5 +178,6 @@ esp_err_t ventured_link_probe_start(void) {
 }
 
 void ventured_link_probe_kick(void) {
+    s_want_ping = true;
     if (s_task) xTaskNotifyGive(s_task);
 }

@@ -21,6 +21,7 @@
 #include "net/wifi_sta.h"
 #include "pcm_metrics.h"
 #include "protocol/rec_event.h"
+#include "rec_gate.h"
 
 static const char *TAG = "board_c_mic";
 #define SCAN_PERIOD_MS 10U
@@ -39,6 +40,8 @@ static int16_t s_pcm[DMA_FRAMES];
 static int16_t *s_keep;
 static size_t s_keep_cap;
 static size_t s_keep_count;
+static bool s_keep_held;
+static volatile bool s_hand_held;
 
 static void *alloc_audio(size_t bytes) {
     void *block = heap_caps_malloc(bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -76,6 +79,15 @@ static bool keep_full(void) {
     return s_keep != NULL && s_keep_cap > 0 && s_keep_count >= s_keep_cap;
 }
 
+static void clear_keep(void) {
+    if (s_keep != NULL && s_keep_count > 0) {
+        memset(s_keep, 0, s_keep_count * sizeof(int16_t));
+        ESP_LOGI(TAG, "pcm keep cleared samples=%u", (unsigned)s_keep_count);
+    }
+    s_keep_count = 0;
+    s_keep_held = false;
+}
+
 static void emit_rec(const ventured_rec_status_t *status) {
     char record[192];
     if (!ventured_format_rec_event(record, sizeof(record), status)) return;
@@ -97,14 +109,18 @@ static ventured_rec_status_t rec_from_metrics(ventured_rec_state_t state, const 
     return status;
 }
 
-static void fail_i2s(void) {
+static void fail_rec(const char *reason) {
     ventured_rec_status_t status = {
         .sequence = ++s_sequence,
         .state = VENTURED_REC_FAIL,
     };
-    strncpy(status.reason, "I2S", sizeof(status.reason) - 1U);
+    if (reason != NULL) strncpy(status.reason, reason, sizeof(status.reason) - 1U);
     emit_rec(&status);
     ventured_display_show_rec(&status);
+}
+
+static void fail_i2s(void) {
+    fail_rec("I2S");
 }
 
 static bool begin_record(void) {
@@ -148,32 +164,52 @@ static void rec_task(void *arg) {
     bool recording = false;
     TickType_t rec_start = 0;
     TickType_t next_active = 0;
+    ventured_rec_gate_t gate;
+    ventured_rec_gate_init(&gate);
     ventured_pcm_metrics_t metrics;
     ventured_pcm_metrics_reset(&metrics);
 
     for (;;) {
         TickType_t now = xTaskGetTickCount();
         if ((int32_t)(now - next_scan) >= 0) {
-            bool pressed = gpio_get_level(BOARD_C_MIC_BUTTON_GPIO) == 0;
-            ventured_button_transition_t transition = ventured_button_update(&s_button, pressed);
-            if (!recording && transition == VENTURED_BUTTON_STABLE_PRESSED) {
-                if (ventured_asr_busy()) {
-                    ventured_rec_status_t busy = rec_from_metrics(VENTURED_REC_FAIL, &metrics, 0);
-                    strncpy(busy.reason, "BUSY", sizeof(busy.reason) - 1U);
-                    emit_rec(&busy);
-                    ventured_display_show_rec(&busy);
+            bool gpio_down = gpio_get_level(BOARD_C_MIC_BUTTON_GPIO) == 0;
+            ventured_button_update(&s_button, gpio_down);
+            bool want = s_button.stable_pressed || s_hand_held;
+            uint32_t now_ms = (uint32_t)now * portTICK_PERIOD_MS;
+            bool net_ok = ventured_wifi_link_ready();
+            if (s_keep_held && !ventured_asr_busy()) {
+                clear_keep();
+            }
+            if (recording && !net_ok) {
+                end_record();
+                recording = false;
+                ventured_rec_gate_abort(&gate, now_ms);
+                fail_rec("WIFI");
+                ESP_LOGW(TAG, "record aborted; wifi down");
+                clear_keep();
+            }
+            ventured_rec_gate_action_t action =
+                ventured_rec_gate_update(&gate, want, ventured_asr_busy(), recording && keep_full(), now_ms);
+            if (action == VENTURED_REC_GATE_START) {
+                if (!net_ok) {
+                    ventured_rec_gate_abort(&gate, now_ms);
+                    fail_rec("WIFI");
+                    ESP_LOGW(TAG, "record blocked; wifi down");
                 } else if (begin_record()) {
                     recording = true;
                     rec_start = now;
                     next_active = now + pdMS_TO_TICKS(ACTIVE_EMIT_MS);
                     ventured_pcm_metrics_reset(&metrics);
+                    if (!s_keep_held) clear_keep();
                     s_keep_count = 0;
                     ventured_rec_status_t start = rec_from_metrics(VENTURED_REC_START, &metrics, 0);
                     emit_rec(&start);
                     ventured_display_show_rec(&start);
                     ESP_LOGI(TAG, "record start");
+                } else {
+                    ventured_rec_gate_abort(&gate, now_ms);
                 }
-            } else if (recording && (transition == VENTURED_BUTTON_STABLE_RELEASED || keep_full())) {
+            } else if (action == VENTURED_REC_GATE_STOP) {
                 end_record();
                 recording = false;
                 uint32_t ms = (uint32_t)(now - rec_start);
@@ -183,8 +219,17 @@ static void rec_task(void *arg) {
                 ESP_LOGI(TAG, "record done ms=%" PRIu32 " rms=%" PRIu32 " peak=%" PRIu32 " silence=%d",
                          done.ms, done.rms, done.peak, (int)done.silence);
                 if (!done.silence && s_keep != NULL && s_keep_count > 0 && ventured_wifi_cloud_ready()) {
+                    s_keep_held = true;
                     ventured_asr_submit(s_keep, s_keep_count);
+                    if (!ventured_asr_busy()) {
+                        clear_keep();
+                    }
+                } else {
+                    clear_keep();
                 }
+            } else if (action == VENTURED_REC_GATE_CANCEL_ASR) {
+                ventured_asr_cancel();
+                ESP_LOGI(TAG, "asr cancel requested");
             }
             next_scan += pdMS_TO_TICKS(SCAN_PERIOD_MS);
             if ((int32_t)(now - next_scan) >= 0) {
@@ -247,6 +292,10 @@ static esp_err_t configure_i2s(void) {
 #endif
     ESP_RETURN_ON_ERROR(i2s_channel_init_std_mode(s_rx, &std_cfg), TAG, "i2s std");
     return ESP_OK;
+}
+
+void ventured_mic_rec_set_hand_held(bool held) {
+    s_hand_held = held;
 }
 
 esp_err_t ventured_mic_rec_start(void) {
