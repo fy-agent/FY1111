@@ -16,8 +16,11 @@
 5. **VibeKey has no Wi-Fi, NVS secrets, ST7789, or Chinese font.** Reuse is
    limited to the existing bounded serial line buffer and the reserved Board C
    LCD pins. New STA, NVS, config parser, and 16×16 glyphs are local.
-6. **SiliconFlow key is stored for the next increment.** This task only
-   configures and delivers it. No HTTP upload yet.
+6. **SiliconFlow upload is on-device.** After a non-silent GPIO9 capture,
+   firmware streams 16 kHz mono PCM16 WAV to
+   `/v1/audio/transcriptions` with model
+   `XingChenAGI/XingChenASR-V3.2-Ultra` (or a user-entered id). Empty key
+   stays Wi-Fi only. Returned text is `VKEY_ASR/1`, not focused-window insert.
 7. **Display is the reserved ST7789 SPI panel** (SCL 21, SDA 47, DC 43, CS 44,
    RST unused). User-facing copy may say OLED; the pin owner is this LCD.
 
@@ -36,7 +39,7 @@
 - stdin / USB-Serial-JTAG line reader parses `VKEY_CONFIG/1`.
 - STA connect; event handler emits `VKEY_NET/1` and refreshes the status
   canvas. Encoder `VKEY_INPUT/1` is unchanged.
-- Small 16×16 Chinese glyph set: 未连接中已失败网络 plus ASCII digits/`.:-`.
+- 32×32 Chinese glyph set for the 1.3" 240×240 panel: 未连接中已失败网络录音完成 plus ASCII digits/`.:-`.
 
 ## Security
 

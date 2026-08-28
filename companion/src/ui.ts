@@ -30,6 +30,18 @@ export const NETWORK_STATE_LABELS: Record<NetworkState, string> = {
 export const WIFI_BAND_HINT = "开发板只支持 2.4GHz Wi-Fi。5G 热点搜不到，也不会变成已连接。";
 export const WIFI_FIVE_G_ALERT = "当前名称像 5G 热点，开发板连不上。请改用 2.4GHz 名称。";
 export const WIFI_CONNECTING_STUCK_HINT = "仍在连接中：若这是 5G 热点，开发板搜不到，请改用 2.4GHz 名称。";
+export const MIC_REC_HINT = "按住 GPIO9 录音，松开结束；有外部内存时最长约数分钟，存满会自动停。已联网且填写 Key 后，板子会把 16 kHz WAV 传到硅基，再把转写回传到这里。";
+export const CLOUD_OPTIONAL_HINT = "API Key 可留空只测 Wi-Fi。转写默认 XingChenAGI/XingChenASR-V3.2-Ultra，也可自行填写其他模型。";
+
+export function recStateLabel(state: string | null): string | null {
+  switch (state) {
+    case "START":
+    case "ACTIVE": return "录音中";
+    case "DONE": return "录音完成";
+    case "FAIL": return "录音失败";
+    default: return null;
+  }
+}
 
 export function networkReasonLabel(reason: string | null): string | null {
   switch (reason) {

@@ -14,8 +14,11 @@ h1 { margin: 0; font-size: 1.35rem; } p { margin: 4px 0 0; color: #5d687a; overf
 .net { border-radius: 999px; padding: 4px 8px; font-size: .78rem; font-weight: 700; background: #e7edf6; color: #3d4a63; }
 .net.connecting { background: #fff1c7; color: #765500; } .net.connected { background: #d9f6e3; color: #0f6b38; } .net.failed { background: #ffe0e7; color: #a02b4d; }
 .settings-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 14px 14px; }
-.settings-panel label { display: grid; gap: 4px; font-size: .85rem; color: #4d5a70; }
-.settings-panel button, .settings-panel small, .settings-panel p { grid-column: 1 / -1; }
+.settings-panel label, .settings-panel .settings-field { display: grid; gap: 4px; font-size: .85rem; color: #4d5a70; }
+.settings-panel > button, .settings-panel small, .settings-panel p { grid-column: 1 / -1; }
+.settings-panel .secret-field { display: flex; gap: 6px; align-items: stretch; }
+.settings-panel .secret-field input { flex: 1; }
+.settings-panel .secret-toggle { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; padding: 8px 10px; }
 .settings-panel p { margin: 0; color: #5d687a; font-size: .85rem; }
 .settings-panel .hint { background: #fff1c7; color: #765500; padding: 8px 10px; border-radius: 8px; }
 .settings-panel .warn, .settings-panel small.warn { color: #a02b4d; font-weight: 600; }

@@ -185,7 +185,7 @@ export function App({ host }: { host: CompanionHost }) {
     if (!canApply) return;
     setBusy(true);
     try {
-      const payload = { ...device, apiKey: device.apiKey.trim() || "sk-debug", model: device.model || "FunAudioLLM/SenseVoiceSmall" };
+      const payload = { ...device, apiKey: device.apiKey.trim(), model: device.model.trim() };
       const network = await host.applyDeviceConfig(draft.serial.port, draft.serial.baud, payload);
       setRuntime((current) => ({ ...current, network }));
       if (ssidLooksFiveG(device.ssid) || network.reason === "BAND") {

@@ -16,9 +16,13 @@
 static const char *k_nvs = "ventured";
 static ventured_net_listener_t s_listener;
 static ventured_net_status_t s_status;
+static char s_api_key[VENTURED_API_KEY_MAX + 1];
+static char s_model[VENTURED_MODEL_MAX + 1];
 static uint32_t s_seq;
 static int s_retries;
 static bool s_started;
+
+static void remember_cloud(const ventured_device_config_t *config);
 
 static void set_reason(const char *reason) {
     memset(s_status.reason, 0, sizeof(s_status.reason));
@@ -87,6 +91,7 @@ static esp_err_t persist(const ventured_device_config_t *config) {
     if (err == ESP_OK) err = nvs_write_str(handle, "key", config->api_key);
     if (err == ESP_OK) err = nvs_write_str(handle, "model", config->model);
     if (err == ESP_OK) err = nvs_commit(handle);
+    if (err == ESP_OK) remember_cloud(config);
     nvs_close(handle);
     return err;
 }
@@ -170,6 +175,27 @@ void ventured_wifi_set_listener(ventured_net_listener_t listener) { s_listener =
 
 void ventured_wifi_copy_status(ventured_net_status_t *out) {
     if (out) *out = s_status;
+}
+
+static void remember_cloud(const ventured_device_config_t *config) {
+    memset(s_api_key, 0, sizeof(s_api_key));
+    memset(s_model, 0, sizeof(s_model));
+    if (config == NULL) return;
+    strncpy(s_api_key, config->api_key, sizeof(s_api_key) - 1);
+    strncpy(s_model, config->model, sizeof(s_model) - 1);
+}
+
+bool ventured_wifi_cloud_ready(void) {
+    return s_status.state == VENTURED_NET_CONNECTED && s_api_key[0] != '\0' && s_model[0] != '\0';
+}
+
+bool ventured_wifi_copy_cloud(char *api_key, size_t key_len, char *model, size_t model_len) {
+    if (api_key == NULL || key_len == 0 || model == NULL || model_len == 0) return false;
+    memset(api_key, 0, key_len);
+    memset(model, 0, model_len);
+    strncpy(api_key, s_api_key, key_len - 1);
+    strncpy(model, s_model, model_len - 1);
+    return s_status.state == VENTURED_NET_CONNECTED && s_api_key[0] != '\0' && s_model[0] != '\0';
 }
 
 void ventured_wifi_publish_current(void) {

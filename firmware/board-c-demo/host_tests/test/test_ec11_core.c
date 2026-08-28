@@ -85,13 +85,17 @@ void test_event_formatter_is_exact_and_bounded(void) {
 void test_board_c_manifest_has_exact_encoder_pins_and_no_listed_collisions(void) {
     const int pins[] = {
         BOARD_C_ENCODER_CLK_GPIO, BOARD_C_ENCODER_DT_GPIO, BOARD_C_ACTION_BUTTON_GPIO,
-        BOARD_C_MIC_WS_GPIO, BOARD_C_MIC_SD_GPIO, BOARD_C_MIC_SCK_GPIO,
+        BOARD_C_MIC_BUTTON_GPIO, BOARD_C_MIC_WS_GPIO, BOARD_C_MIC_SD_GPIO, BOARD_C_MIC_SCK_GPIO,
         BOARD_C_LCD_SCL_GPIO, BOARD_C_LCD_SDA_GPIO, BOARD_C_LCD_DC_GPIO,
         BOARD_C_LCD_CS_GPIO, BOARD_C_WS2812_GPIO, BOARD_C_PTT_GPIO,
     };
     TEST_ASSERT_EQUAL_INT(6, BOARD_C_ENCODER_CLK_GPIO);
     TEST_ASSERT_EQUAL_INT(7, BOARD_C_ENCODER_DT_GPIO);
     TEST_ASSERT_EQUAL_INT(8, BOARD_C_ACTION_BUTTON_GPIO);
+    TEST_ASSERT_EQUAL_INT(9, BOARD_C_MIC_BUTTON_GPIO);
+    TEST_ASSERT_EQUAL_INT(42, BOARD_C_MIC_WS_GPIO);
+    TEST_ASSERT_EQUAL_INT(2, BOARD_C_MIC_SD_GPIO);
+    TEST_ASSERT_EQUAL_INT(41, BOARD_C_MIC_SCK_GPIO);
     for (unsigned int left = 0; left < sizeof(pins) / sizeof(pins[0]); ++left) {
         for (unsigned int right = left + 1; right < sizeof(pins) / sizeof(pins[0]); ++right) {
             TEST_ASSERT_NOT_EQUAL(pins[left], pins[right]);

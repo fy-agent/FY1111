@@ -41,6 +41,16 @@ export interface NetworkStatus {
   pingSent: number | null;
   lastLog: string | null;
   beats: number | null;
+  recState: string | null;
+  recMs: number | null;
+  recSamples: number | null;
+  recRms: number | null;
+  recPeak: number | null;
+  recSilence: boolean | null;
+  recReason: string | null;
+  asrState: string | null;
+  asrText: string | null;
+  asrReason: string | null;
 }
 
 export interface DeviceSettings {
@@ -71,7 +81,17 @@ export const EMPTY_NETWORK: NetworkStatus = {
   pingLost: null,
   pingSent: null,
   lastLog: null,
-  beats: null
+  beats: null,
+  recState: null,
+  recMs: null,
+  recSamples: null,
+  recRms: null,
+  recPeak: null,
+  recSilence: null,
+  recReason: null,
+  asrState: null,
+  asrText: null,
+  asrReason: null
 };
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
@@ -79,7 +99,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   ssid: "",
   password: "",
   apiKey: "",
-  model: "FunAudioLLM/SenseVoiceSmall"
+  model: "XingChenAGI/XingChenASR-V3.2-Ultra"
 };
 
-export const CLOUD_MODELS = ["FunAudioLLM/SenseVoiceSmall", "TeleAI/TeleSpeechASR"] as const;
+export const CLOUD_MODELS = ["XingChenAGI/XingChenASR-V3.2-Ultra"] as const;

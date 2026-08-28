@@ -2,11 +2,8 @@ use std::fmt::{Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
-pub const DEFAULT_CLOUD_MODEL: &str = "FunAudioLLM/SenseVoiceSmall";
-pub const CLOUD_MODELS: [&str; 2] = [
-    "FunAudioLLM/SenseVoiceSmall",
-    "TeleAI/TeleSpeechASR",
-];
+pub const DEFAULT_CLOUD_MODEL: &str = "XingChenAGI/XingChenASR-V3.2-Ultra";
+pub const CLOUD_MODELS: [&str; 1] = ["XingChenAGI/XingChenASR-V3.2-Ultra"];
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
@@ -41,6 +38,26 @@ pub struct NetworkStatus {
     pub last_log: Option<String>,
     #[serde(default)]
     pub beats: Option<u32>,
+    #[serde(default)]
+    pub rec_state: Option<String>,
+    #[serde(default)]
+    pub rec_ms: Option<u32>,
+    #[serde(default)]
+    pub rec_samples: Option<u32>,
+    #[serde(default)]
+    pub rec_rms: Option<u32>,
+    #[serde(default)]
+    pub rec_peak: Option<u32>,
+    #[serde(default)]
+    pub rec_silence: Option<bool>,
+    #[serde(default)]
+    pub rec_reason: Option<String>,
+    #[serde(default)]
+    pub asr_state: Option<String>,
+    #[serde(default)]
+    pub asr_text: Option<String>,
+    #[serde(default)]
+    pub asr_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -61,15 +78,8 @@ impl DeviceConfigRecord {
 }
 
 pub fn model_allowed(model: &str) -> bool {
-    CLOUD_MODELS.contains(&model)
-}
-
-pub fn placeholder_api_key(api_key: &str) -> String {
-    if api_key.trim().is_empty() {
-        "sk-debug".to_owned()
-    } else {
-        api_key.to_owned()
-    }
+    let trimmed = model.trim();
+    trimmed.chars().count() <= 64 && !trimmed.chars().any(char::is_control)
 }
 
 pub fn ssid_looks_5g(ssid: &str) -> bool {
@@ -126,5 +136,24 @@ mod tests {
         assert!(!ssid_looks_5g("5guys"));
         assert!(!ssid_looks_5g("cafe"));
         assert!(!ssid_looks_5g("channel5"));
+    }
+
+    #[test]
+    fn config_line_keeps_empty_cloud_fields() {
+        let line = super::DeviceConfigRecord {
+            seq: 1,
+            ssid: "cafe".into(),
+            password: "secret".into(),
+            api_key: String::new(),
+            model: String::new(),
+        }
+        .line()
+        .unwrap();
+        assert!(line.contains("\"apiKey\":\"\""));
+        assert!(line.contains("\"model\":\"\""));
+        assert!(super::model_allowed(""));
+        assert!(super::model_allowed("XingChenAGI/XingChenASR-V3.2-Ultra"));
+        assert!(super::model_allowed("whisper"));
+        assert!(!super::model_allowed(&"x".repeat(65)));
     }
 }

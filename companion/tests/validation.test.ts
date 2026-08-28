@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { canonicalChord, chordIdentity, deviceSettingsError, displayNameError, mappingErrors, modifiersFromKeyboardEvent, primaryFromKeyboardEvent, ssidLooksFiveG } from "../src/validation";
 import { createFixtureHost } from "../src/host";
-import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, NETWORK_STATE_LABELS, RUNTIME_STATE_LABELS, WIFI_BAND_HINT, networkChipLabel, networkReasonLabel } from "../src/ui";
+import { formatRuntimeText, INITIAL_MAPPINGS, INPUT_LABELS, MIC_REC_HINT, NETWORK_STATE_LABELS, RUNTIME_STATE_LABELS, WIFI_BAND_HINT, networkChipLabel, networkReasonLabel, recStateLabel } from "../src/ui";
 import packageJson from "../package.json";
 import tauriConfig from "../src-tauri/tauri.conf.json";
 
@@ -40,6 +40,10 @@ describe("mapping validation", () => {
     expect(formatRuntimeText("input dispatch rejected · rejected")).toBe("输入派发被拒绝 · 已拒绝");
     expect(formatRuntimeText("foreground restore target is missing · rejected")).toBe("前台恢复目标不存在 · 已拒绝");
     expect(formatRuntimeText("foreground restore was rejected · rejected")).toBe("前台恢复被拒绝 · 已拒绝");
+    expect(MIC_REC_HINT).toContain("GPIO9");
+    expect(recStateLabel("ACTIVE")).toBe("录音中");
+    expect(recStateLabel("DONE")).toBe("录音完成");
+    expect(recStateLabel("FAIL")).toBe("录音失败");
   });
   it("keeps daily development on the fixture while reserving a native Vite bridge for Tauri", () => {
     expect(packageJson.scripts.dev).toBe("pnpm dev:fixture");
@@ -74,12 +78,15 @@ describe("mapping validation", () => {
       ssid: "cafe",
       password: "secret",
       apiKey: "sk-demo",
-      model: "FunAudioLLM/SenseVoiceSmall"
+      model: "XingChenAGI/XingChenASR-V3.2-Ultra"
     });
     expect(network).toMatchObject({ state: "CONNECTED", ip: "10.0.0.8", ssid: "cafe" });
     expect((await host.loadDeviceSettings()).apiKey).toBe("sk-demo");
     expect(NETWORK_STATE_LABELS.CONNECTED).toBe("已连接");
-    expect(deviceSettingsError({ version: 1, ssid: "", password: "", apiKey: "", model: "FunAudioLLM/SenseVoiceSmall" })).toContain("Wi-Fi 名称");
+    expect(deviceSettingsError({ version: 1, ssid: "", password: "", apiKey: "", model: "XingChenAGI/XingChenASR-V3.2-Ultra" })).toContain("Wi-Fi 名称");
+    expect(deviceSettingsError({ version: 1, ssid: "cafe", password: "secret", apiKey: "", model: "" })).toBeNull();
+    expect(deviceSettingsError({ version: 1, ssid: "cafe", password: "secret", apiKey: "", model: "XingChenAGI/XingChenASR-V3.2-Ultra" })).toBeNull();
+    expect(deviceSettingsError({ version: 1, ssid: "cafe", password: "", apiKey: "", model: "x".repeat(65) })).toContain("转写模型");
     expect(ssidLooksFiveG("Home-5G")).toBe(true);
     expect(ssidLooksFiveG("5guys")).toBe(false);
     expect(networkChipLabel("FAILED", "", "BAND", true)).toBe("失败 · 仅2.4G");
@@ -90,7 +97,7 @@ describe("mapping validation", () => {
       ssid: "Home-5G",
       password: "secret",
       apiKey: "sk-demo",
-      model: "FunAudioLLM/SenseVoiceSmall"
+      model: "XingChenAGI/XingChenASR-V3.2-Ultra"
     })).resolves.toMatchObject({ state: "FAILED", reason: "BAND" });
   });
   it("maps a recorded keyboard event to the same chord tokens the host persists", () => {

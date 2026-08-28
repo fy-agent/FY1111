@@ -7,13 +7,19 @@ idf_component_register(
         "protocol/config_record.c"
         "protocol/net_event.c"
         "protocol/link_debug.c"
+        "protocol/rec_event.c"
+        "protocol/asr_event.c"
+        "audio/pcm_metrics.c"
+        "audio/wav_pcm.c"
+        "audio/mic_rec.c"
         "net/wifi_sta.c"
+        "net/asr_upload.c"
         "net/config_rx.c"
         "net/link_probe.c"
         "net/status_out.c"
         "display/status_text.c"
-        "display/font16.c"
+        "display/font.c"
         "display/st7789_status.c"
-    INCLUDE_DIRS "." "input" "protocol" "net" "display"
-    REQUIRES driver esp_wifi esp_event esp_netif nvs_flash esp_lcd lwip
+    INCLUDE_DIRS "." "input" "protocol" "net" "display" "audio"
+    REQUIRES driver esp_driver_i2s esp_wifi esp_event esp_netif nvs_flash esp_lcd lwip esp_http_client esp-tls mbedtls
 )

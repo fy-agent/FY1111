@@ -68,7 +68,14 @@ the additional record kinds in `protocol/device-link-v1.md`:
 ```text
 VKEY_CONFIG/1 {"seq":<u32>,"ssid":"...","password":"...","apiKey":"...","model":"..."}
 VKEY_NET/1 {"seq":<u32>,"state":"DISCONNECTED|CONNECTING|CONNECTED|FAILED","ssid":"...","ip":"...","rssi":<i32>,"reason"?:"AUTH|TIMEOUT|NO_AP|BAND|UNKNOWN"}
+VKEY_REC/1 {"seq":<u32>,"state":"START|ACTIVE|DONE|FAIL","ms":<u32>,"samples":<u32>,"rms":<u32>,"peak":<u32>,"silence"?:bool,"reason"?:"I2S|BUSY|UNKNOWN"}
+VKEY_ASR/1 {"seq":<u32>,"state":"START|DONE|FAIL","text"?:"...","reason"?:"WIFI|KEY|AUTH|FORMAT|HTTP|MEM|BUSY"}
 ```
+
+`apiKey` and `model` may be empty (Wi-Fi only). A non-empty model is any
+printable id up to 64 bytes; the UI preset is
+`XingChenAGI/XingChenASR-V3.2-Ultra`. GPIO9 must never emit `VKEY_INPUT/1`.
+ASR `text` is at most 360 bytes and must not include secrets or PCM.
 
 The persisted shortcut profile is exactly:
 
@@ -110,7 +117,8 @@ The persisted shortcut profile is exactly:
   through one frontend localization owner before display.
 - GPIO6/GPIO7 own the encoder phases. GPIO8 owns an independent active-low
   external confirm/action button while retaining the stable `ENCODER_PRESS`
-  protocol ID; it is not presented as an integrated encoder switch.
+  protocol ID; it is not presented as an integrated encoder switch. GPIO9 owns
+  the microphone hold-to-talk button and reports `VKEY_REC/1` only.
 - Shortcut chords are recorded from a real key-down combination after the user
   clicks the mapping control. Allowed tokens are `CTRL`/`ALT`/`SHIFT` plus one
   or more primaries from `A-Z`, `0-9`, `F1-F24`, `ENTER`, `TAB`, `ESC`,

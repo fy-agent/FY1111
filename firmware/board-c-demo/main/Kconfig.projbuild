@@ -7,4 +7,11 @@ config VENTURED_ENCODER_INVERT_DIRECTION
         Reverse the semantic clockwise/counter-clockwise events without
         changing Board C pin ownership.
 
+config VENTURED_MIC_SLOT_RIGHT
+    bool "Use I2S right slot for the digital microphone"
+    default n
+    help
+        Board C documents WS/SD/SCK only. Left slot is the usual MEMS
+        wiring (L/R to GND). Enable this if RMS stays 0 while speaking.
+
 endmenu

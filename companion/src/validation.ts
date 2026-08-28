@@ -1,4 +1,4 @@
-import type { DeviceSettings, MappingDraft } from "./types";
+import { type DeviceSettings, type MappingDraft } from "./types";
 
 const modifiers = ["CTRL", "ALT", "SHIFT"] as const;
 const allowedPrimary = new Set([
@@ -104,8 +104,11 @@ function boundedField(value: string, min: number, max: number, label: string): s
 }
 
 export function deviceSettingsError(settings: DeviceSettings): string | null {
+  const model = settings.model.trim();
   return boundedField(settings.ssid, 1, 32, "Wi-Fi 名称")
-    ?? boundedField(settings.password, 0, 64, "Wi-Fi 密码");
+    ?? boundedField(settings.password, 0, 64, "Wi-Fi 密码")
+    ?? boundedField(settings.apiKey, 0, 256, "API Key")
+    ?? (model === "" ? null : boundedField(model, 1, 64, "转写模型"));
 }
 
 export function ssidLooksFiveG(ssid: string): boolean {

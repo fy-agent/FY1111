@@ -8,20 +8,24 @@ The pin manifest in `main/board_c_pins.h` is the single source of truth.
 | --- | --- | --- |
 | Rotary encoder | ENA/CLK 6, ENB/DT 7; SW unconnected | enabled |
 | External confirm/action button | pull-up SIG 8; 3.3 V and common GND | enabled |
-| Digital microphone | WS 42, SD 2, SCK 41 | reserved, disabled |
-| ST7789 LCD | SCL 21, SDA 47, DC 43, CS 44 | status screen: Chinese network state |
+| Microphone start button | pull-up SIG 9; same active-low wiring as GPIO8 | enabled |
+| Digital microphone | WS 42, SD 2, SCK 41 | I2S RX record test |
+| ST7789 LCD | SCL 21, SDA 47, DC 43, CS 44 | 1.3" 240x240 status screen, 32x32 Chinese glyphs |
 | WS2812 | 48 | reserved, disabled |
 | Optional PTT button | 12 | reserved, disabled |
 | Camera and SD-card resources | Board-documented resources | reserved; not allocated by this demo |
 
-The exact module flash and PSRAM configuration has not been identified, so the
-defaults intentionally do not assume a VibeKey N16R8-like module.
+Board C probe evidence is ESP32-S3 QFN56 with 8MB in-package octal PSRAM.
+Firmware enables that PSRAM for the PCM keep buffer. Do not copy a VibeKey
+N16R8 flash layout onto other hardware.
 
 The external button is active-low: GPIO8 is expected to be HIGH while idle and
 LOW while pressed. It produces the fixed `ENCODER_PRESS` protocol ID, but it is
-not an integrated encoder switch. GPIO6/GPIO7 conflict with camera use and
-GPIO8 conflicts with DHT11 use, so camera or DHT11 enablement needs a separate
-pin-allocation decision.
+not an integrated encoder switch. GPIO9 uses the same active-low pull-up
+wiring as a hold-to-talk microphone start button and must never emit
+`VKEY_INPUT/1`. GPIO6/GPIO7 conflict with camera use and GPIO8 conflicts with
+DHT11 use, so camera or DHT11 enablement needs a separate pin-allocation
+decision. GPIO12 remains reserved and unused.
 
 ## Firmware
 
@@ -29,6 +33,10 @@ Use ESP-IDF 5.5.4. The adapter configures GPIO6/GPIO7 for rotary samples without
 GPIO8 interrupts, queues ISR samples, scans the independent GPIO8 button on a
 10 ms cadence, emits only semantic `VKEY_INPUT/1` records on the ESP32-S3
 USB-Serial-JTAG console, and owns no shortcut mapping.
+Hold GPIO9 to capture I2S PCM until release, or until the PCM keep buffer
+fills (about a few minutes when 8MB PSRAM is present). The firmware emits
+`VKEY_REC/1` RMS/peak metrics and, when cloud settings are present, uploads
+16 kHz mono WAV. See `docs/mic-rec-test.md`.
 The `VKEY_INPUT/1` record is documented in `protocol/input-event-v1.md`.
 Host-to-device Wi-Fi/API configuration and device-to-host network status are
 documented in `protocol/device-link-v1.md`. The Companion stores those secrets

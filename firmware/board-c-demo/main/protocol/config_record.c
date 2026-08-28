@@ -4,17 +4,14 @@
 #include <string.h>
 
 static const char *k_prefix = "VKEY_CONFIG/1 ";
-static const char *k_models[] = {
-    "FunAudioLLM/SenseVoiceSmall",
-    "TeleAI/TeleSpeechASR",
-};
-
 bool ventured_model_allowed(const char *model) {
     if (model == NULL) return false;
-    for (size_t i = 0; i < sizeof(k_models) / sizeof(k_models[0]); ++i) {
-        if (strcmp(model, k_models[i]) == 0) return true;
+    size_t n = strlen(model);
+    if (n > VENTURED_MODEL_MAX) return false;
+    for (size_t i = 0; i < n; ++i) {
+        if ((unsigned char)model[i] < 32) return false;
     }
-    return false;
+    return true;
 }
 
 static const char *skip_ws(const char *cursor) {
@@ -130,9 +127,7 @@ bool ventured_parse_config_line(const char *line, ventured_device_config_t *out)
     if (*cursor != '\0') return false;
 
     if (!seen_seq || !copy_required(parsed.ssid, sizeof(parsed.ssid), parsed.ssid, seen_ssid) ||
-        !seen_password ||
-        !copy_required(parsed.api_key, sizeof(parsed.api_key), parsed.api_key, seen_key) ||
-        !copy_required(parsed.model, sizeof(parsed.model), parsed.model, seen_model) ||
+        !seen_password || !seen_key || !seen_model ||
         !ventured_model_allowed(parsed.model)) {
         return false;
     }

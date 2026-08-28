@@ -13,6 +13,11 @@
     - ../main/input
     - ../main/protocol
     - ../main/display
+    - ../main/audio
+:files:
+  :source:
+    - ../main/audio/pcm_metrics.c
+    - ../main/audio/wav_pcm.c
 :plugins:
   :enabled:
     - module_generator

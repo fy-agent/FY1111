@@ -4,9 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::device_settings::DeviceSettings;
 use crate::input::Chord;
-use crate::network::{
-    placeholder_api_key, ssid_looks_5g, DeviceConfigRecord, NetworkState, NetworkStatus,
-};
+use crate::network::{ssid_looks_5g, DeviceConfigRecord, NetworkState, NetworkStatus};
 use crate::profile::ProfileDraft;
 use crate::serial::{EventSource, SerialError, SerialEvent};
 use crate::target::{
@@ -420,12 +418,8 @@ impl RuntimeController {
             seq: self.config_seq,
             ssid: settings.ssid.clone(),
             password: settings.password.clone(),
-            api_key: placeholder_api_key(&settings.api_key),
-            model: if settings.model.trim().is_empty() {
-                crate::network::DEFAULT_CLOUD_MODEL.to_owned()
-            } else {
-                settings.model.clone()
-            },
+            api_key: settings.api_key.clone(),
+            model: settings.model.clone(),
         }
         .line()
         .map_err(|_| RuntimeError::InvalidProfile)?;
@@ -978,11 +972,35 @@ mod tests {
                 ssid: "cafe".into(),
                 password: "secret".into(),
                 api_key: "sk-demo".into(),
-                model: "FunAudioLLM/SenseVoiceSmall".into(),
+                model: "XingChenAGI/XingChenASR-V3.2-Ultra".into(),
             })
             .unwrap();
         assert_eq!(status.state, NetworkState::Connecting);
         assert_eq!(runtime.status().state, RuntimeMode::Stopped);
+        assert_eq!(status.ssid, "cafe");
+    }
+
+    #[test]
+    fn apply_config_allows_empty_cloud_fields_for_wifi_only() {
+        let mut runtime = RuntimeController::default();
+        runtime.attach_source(
+            "fixture".into(),
+            115200,
+            Box::new(ConfigSource {
+                written: String::new(),
+                network: None,
+            }),
+        );
+        let status = runtime
+            .apply_config(&DeviceSettings {
+                version: 1,
+                ssid: "cafe".into(),
+                password: "secret".into(),
+                api_key: String::new(),
+                model: String::new(),
+            })
+            .unwrap();
+        assert_eq!(status.state, NetworkState::Connecting);
         assert_eq!(status.ssid, "cafe");
     }
 
@@ -1003,7 +1021,7 @@ mod tests {
                 ssid: "Home-5G".into(),
                 password: "secret".into(),
                 api_key: "sk-demo".into(),
-                model: "FunAudioLLM/SenseVoiceSmall".into(),
+                model: "XingChenAGI/XingChenASR-V3.2-Ultra".into(),
             })
             .unwrap();
         assert_eq!(status.state, NetworkState::Failed);

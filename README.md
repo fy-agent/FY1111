@@ -84,11 +84,13 @@ warning instead of staying on 连接中.
 Live dispatch is process-local, defaults to off after every restart, and must
 be explicitly enabled only after a valid profile is loaded.
 
-Future voice work remains a documented boundary only:
-`microphone capture -> audio transport -> speech recognizer -> text/Agent ->
-guarded text insertion`. No ASR provider, credentials, microphone transport,
-or text insertion belongs to this demo.
+Hold GPIO9 to record 16 kHz mono PCM until release or the PSRAM keep buffer
+fills. When Wi-Fi and a SiliconFlow key are set, the board uploads WAV and
+shows the XingChen transcription on Companion and the LCD. Focused-window
+text insertion stays out of this increment. See
+[the microphone record test plan](docs/mic-rec-test.md).
 
 See [the Board C guide](docs/board-c-demo.md), [the event contract](protocol/input-event-v1.md),
 [the device-link contract](protocol/device-link-v1.md),
+[the microphone record test](docs/mic-rec-test.md),
 and [source provenance](docs/source-provenance.md).

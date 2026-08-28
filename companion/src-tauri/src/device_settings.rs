@@ -117,7 +117,15 @@ mod tests {
         invalid.ssid.clear();
         assert_eq!(invalid.validate(), Err(NetworkError::Invalid));
         invalid = settings();
-        invalid.model = "whisper".into();
+        invalid.model = "x".repeat(65);
         assert_eq!(invalid.validate(), Err(NetworkError::Invalid));
+    }
+
+    #[test]
+    fn empty_api_key_and_model_is_allowed_for_wifi_only() {
+        let mut wifi_only = settings();
+        wifi_only.api_key.clear();
+        wifi_only.model.clear();
+        assert_eq!(wifi_only.validate(), Ok(()));
     }
 }

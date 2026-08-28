@@ -13,6 +13,8 @@ const PREFIX: &str = "VKEY_INPUT/1 ";
 const NET_PREFIX: &str = "VKEY_NET/1 ";
 const LOG_PREFIX: &str = "VKEY_LOG/1 ";
 const PING_PREFIX: &str = "VKEY_PING/1 ";
+const REC_PREFIX: &str = "VKEY_REC/1 ";
+const ASR_PREFIX: &str = "VKEY_ASR/1 ";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SerialEvent {
@@ -173,6 +175,34 @@ impl SerialPortSource {
                 self.last_network = Some(status);
                 None
             }
+            DecodedLine::Rec {
+                state,
+                ms,
+                samples,
+                rms,
+                peak,
+                silence,
+                reason,
+            } => {
+                let mut status = self.last_network.clone().unwrap_or_default();
+                status.rec_state = Some(state);
+                status.rec_ms = Some(ms);
+                status.rec_samples = Some(samples);
+                status.rec_rms = Some(rms);
+                status.rec_peak = Some(peak);
+                status.rec_silence = silence;
+                status.rec_reason = reason;
+                self.last_network = Some(status);
+                None
+            }
+            DecodedLine::Asr { state, text, reason } => {
+                let mut status = self.last_network.clone().unwrap_or_default();
+                status.asr_state = Some(state);
+                status.asr_text = text;
+                status.asr_reason = reason;
+                self.last_network = Some(status);
+                None
+            }
         }
     }
 }
@@ -288,6 +318,34 @@ struct PingRecord {
     sent: u32,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AsrRecord {
+    #[allow(dead_code)]
+    seq: u32,
+    state: String,
+    #[serde(default)]
+    text: Option<String>,
+    #[serde(default)]
+    reason: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RecRecord {
+    #[allow(dead_code)]
+    seq: u32,
+    state: String,
+    ms: u32,
+    samples: u32,
+    rms: u32,
+    peak: u32,
+    #[serde(default)]
+    silence: Option<bool>,
+    #[serde(default)]
+    reason: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DecodedLine {
     Input(SerialEvent),
@@ -300,6 +358,20 @@ pub enum DecodedLine {
         lost: u32,
         sent: u32,
     },
+    Rec {
+        state: String,
+        ms: u32,
+        samples: u32,
+        rms: u32,
+        peak: u32,
+        silence: Option<bool>,
+        reason: Option<String>,
+    },
+    Asr {
+        state: String,
+        text: Option<String>,
+        reason: Option<String>,
+    },
 }
 
 fn merge_network(previous: Option<&NetworkStatus>, mut status: NetworkStatus) -> NetworkStatus {
@@ -310,6 +382,16 @@ fn merge_network(previous: Option<&NetworkStatus>, mut status: NetworkStatus) ->
         status.ping_lost = previous.ping_lost;
         status.ping_sent = previous.ping_sent;
         status.last_log = previous.last_log.clone();
+        status.rec_state = previous.rec_state.clone();
+        status.rec_ms = previous.rec_ms;
+        status.rec_samples = previous.rec_samples;
+        status.rec_rms = previous.rec_rms;
+        status.rec_peak = previous.rec_peak;
+        status.rec_silence = previous.rec_silence;
+        status.rec_reason = previous.rec_reason.clone();
+        status.asr_state = previous.asr_state.clone();
+        status.asr_text = previous.asr_text.clone();
+        status.asr_reason = previous.asr_reason.clone();
         let extra = u32::from(status.state == NetworkState::Connected);
         status.beats = Some(previous.beats.unwrap_or(0).saturating_add(extra));
     } else if status.state == NetworkState::Connected {
@@ -363,13 +445,37 @@ pub fn decode_record(raw: &[u8]) -> Option<DecodedLine> {
             sent: record.sent,
         });
     }
+    if let Some(json) = line.strip_prefix(REC_PREFIX) {
+        let record = serde_json::from_str::<RecRecord>(json).ok()?;
+        return Some(DecodedLine::Rec {
+            state: record.state,
+            ms: record.ms,
+            samples: record.samples,
+            rms: record.rms,
+            peak: record.peak,
+            silence: record.silence,
+            reason: record.reason.filter(|reason| !reason.is_empty()),
+        });
+    }
+    if let Some(json) = line.strip_prefix(ASR_PREFIX) {
+        let record = serde_json::from_str::<AsrRecord>(json).ok()?;
+        return Some(DecodedLine::Asr {
+            state: record.state,
+            text: record.text.filter(|text| !text.is_empty()),
+            reason: record.reason.filter(|reason| !reason.is_empty()),
+        });
+    }
     None
 }
 
 pub fn decode_line(raw: &[u8]) -> Option<SerialEvent> {
     match decode_record(raw)? {
         DecodedLine::Input(event) => Some(event),
-        DecodedLine::Network { .. } | DecodedLine::Log { .. } | DecodedLine::Ping { .. } => None,
+        DecodedLine::Network { .. }
+        | DecodedLine::Log { .. }
+        | DecodedLine::Ping { .. }
+        | DecodedLine::Rec { .. }
+        | DecodedLine::Asr { .. } => None,
     }
 }
 
@@ -417,6 +523,32 @@ mod tests {
         assert_eq!(host, "8.8.8.8");
         assert!(ok);
         assert_eq!(ms, 18);
+        let DecodedLine::Rec {
+            state,
+            rms,
+            silence,
+            ..
+        } = decode_record(
+            br#"VKEY_REC/1 {"seq":3,"state":"DONE","ms":1200,"samples":19200,"rms":800,"peak":9000,"silence":false}"#,
+        )
+        .unwrap() else {
+            panic!("expected rec record");
+        };
+        assert_eq!(state, "DONE");
+        assert_eq!(rms, 800);
+        assert_eq!(silence, Some(false));
+        assert!(decode_line(
+            br#"VKEY_REC/1 {"seq":3,"state":"DONE","ms":1200,"samples":19200,"rms":800,"peak":9000,"silence":false}"#
+        )
+        .is_none());
+        let DecodedLine::Asr { state, text, .. } = decode_record(
+            r#"VKEY_ASR/1 {"seq":2,"state":"DONE","text":"hello asr"}"#.as_bytes(),
+        )
+        .unwrap() else {
+            panic!("expected asr record");
+        };
+        assert_eq!(state, "DONE");
+        assert_eq!(text.as_deref(), Some("hello asr"));
     }
     #[test]
     fn tracker_reports_gaps_and_rejects_duplicates() {

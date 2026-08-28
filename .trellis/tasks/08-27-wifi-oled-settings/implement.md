@@ -35,3 +35,14 @@
 - [x] `pnpm --dir companion test:interaction`
 - [x] `cargo test` in `companion/src-tauri`
 - [x] Firmware host tests
+
+## 7. GPIO9 record + SiliconFlow ASR (same task, later increment)
+
+- [x] Hold-to-talk on GPIO9; never emit `VKEY_INPUT/1`.
+- [x] Keep 16 kHz mono 16-bit PCM, wrap a 44-byte WAV header, stream HTTPS
+      multipart to `api.siliconflow.cn/v1/audio/transcriptions`.
+- [x] Default model `XingChenAGI/XingChenASR-V3.2-Ultra`; empty key/model is
+      Wi-Fi only; custom model ids are allowed.
+- [x] `VKEY_REC/1` and `VKEY_ASR/1` to Companion; LCD 转写 / 转写完成 / 转写失败.
+- [x] Enable octal 8MB PSRAM; record until release or keep-buffer full
+      (~minutes), not a 3 s hard stop.

@@ -33,23 +33,24 @@ step after this settings and link path exists.
 
 ## Acceptance Criteria
 
-- [ ] Settings is collapsed by default and does not add a fourth mapping row.
-- [ ] Fixture and native hosts expose load/save/apply/poll for device settings
+- [x] Settings is collapsed by default and does not add a fourth mapping row.
+- [x] Fixture and native hosts expose load/save/apply/poll for device settings
       and network status through `CompanionHost`.
-- [ ] Shortcut `profile.json` remains version 1 with no secret fields.
-- [ ] Device settings persist across Companion restart; API key is masked.
-- [ ] `VKEY_CONFIG/1` and `VKEY_NET/1` are specified, parsed strictly, and
+- [x] Shortcut `profile.json` remains version 1 with no secret fields.
+- [x] Device settings persist across Companion restart; API key is masked.
+- [x] `VKEY_CONFIG/1` and `VKEY_NET/1` are specified, parsed strictly, and
       host-tested. Unknown prefixes are still ignored.
-- [ ] Firmware can parse config, connect STA, and format `VKEY_NET/1` without
+- [x] Firmware can parse config, connect STA, and format `VKEY_NET/1` without
       echoing secrets.
-- [ ] OLED/LCD status labels use the small Chinese glyph set; missing display
+- [x] OLED/LCD status labels use the small Chinese glyph set; missing display
       hardware is fail-soft.
-- [ ] Existing shortcut software checks still pass. Visual tests cover the
+- [x] Existing shortcut software checks still pass. Visual tests cover the
       collapsed settings chip and the apply flow in the fixture.
+- [x] GPIO9 hold-to-talk uploads 16 kHz WAV to SiliconFlow XingChen ASR and
+      returns `VKEY_ASR/1` text to Companion/LCD. Focused-window insertion is
+      still out of scope.
 
 ## Notes
 
-Later increment (not this task): I2S microphone on GPIO42/2/41, ESP32 HTTPS
-multipart upload to `https://api.siliconflow.cn/v1/audio/transcriptions`
-(`FunAudioLLM/SenseVoiceSmall` or `TeleAI/TeleSpeechASR`), OLED preview of
-returned `text`, and Companion insertion into a focused desktop input box.
+Focused-window text insertion remains a later increment. Do not archive
+`00-bootstrap-guidelines`.
